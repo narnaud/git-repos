@@ -76,7 +76,18 @@ fn main() -> Result<()> {
     } else {
         println!("Found {} git repository(ies):", repos.len());
         for repo in repos {
-            println!("  {}", repo.display());
+            // Extract parent and repo folder names
+            if let (Some(repo_name), Some(parent_path)) = (repo.file_name(), repo.parent()) {
+                if let Some(parent_name) = parent_path.file_name() {
+                    println!("  {}/{}", parent_name.to_string_lossy(), repo_name.to_string_lossy());
+                } else {
+                    // Fallback if no parent name (e.g., root directory)
+                    println!("  {}", repo_name.to_string_lossy());
+                }
+            } else {
+                // Fallback to full path if extraction fails
+                println!("  {}", repo.display());
+            }
         }
     }
 
