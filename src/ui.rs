@@ -9,7 +9,7 @@ use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Color, Modifier, Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, Row, Table, TableState},
 };
@@ -157,8 +157,7 @@ impl App {
     /// Render the repository table
     fn render_table(&mut self, f: &mut Frame, area: Rect) {
         let header = Row::new(vec!["Repository", "Branch"])
-            .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
-            .bottom_margin(1);
+            .style(Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD));
 
         let rows: Vec<Row> = self
             .repos
@@ -172,9 +171,15 @@ impl App {
             .header(header)
             .block(
                 Block::default()
-                    .title(format!(" Git Repositories - {} ", self.scan_path))
+                    .title("") // Add a small padding on the left
+                    .title(
+                        format!("Git Repositories - {}", self.scan_path)
+                            .bold()
+                            .light_blue(),
+                    )
                     .borders(Borders::ALL)
-                    .border_style(Style::default().fg(Color::Cyan))
+                    .border_type(ratatui::widgets::BorderType::Rounded)
+                    .border_style(Style::default().fg(Color::White))
                     .style(Style::default()),
             )
             .row_highlight_style(
