@@ -2,11 +2,12 @@ use clap::Parser;
 use color_eyre::Result;
 use std::path::PathBuf;
 
+mod app;
 mod git_repo;
 mod ui;
 
+use app::App;
 use git_repo::find_git_repos;
-use ui::App;
 
 /// CLI tool for managing git repositories
 #[derive(Parser, Debug)]
