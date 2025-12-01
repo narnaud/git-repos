@@ -11,7 +11,7 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState},
+    widgets::{Block, Borders, Row, Table, TableState},
 };
 use std::io;
 use std::path::Path;
@@ -20,16 +20,16 @@ use std::path::Path;
 pub struct App {
     repos: Vec<GitRepo>,
     scan_path: String,
-    list_state: ListState,
+    table_state: TableState,
     should_quit: bool,
 }
 
 impl App {
     /// Create a new App instance
     pub fn new(repos: Vec<GitRepo>, scan_path: &Path) -> Self {
-        let mut list_state = ListState::default();
+        let mut table_state = TableState::default();
         if !repos.is_empty() {
-            list_state.select(Some(0));
+            table_state.select(Some(0));
         }
 
         // Convert to normal path display (strip \\?\ prefix on Windows)
@@ -46,7 +46,7 @@ impl App {
         Self {
             repos,
             scan_path: display_path,
-            list_state,
+            table_state,
             should_quit: false,
         }
     }
@@ -110,7 +110,7 @@ impl App {
             return;
         }
 
-        let i = match self.list_state.selected() {
+        let i = match self.table_state.selected() {
             Some(i) => {
                 if i >= self.repos.len() - 1 {
                     0
@@ -120,7 +120,7 @@ impl App {
             }
             None => 0,
         };
-        self.list_state.select(Some(i));
+        self.table_state.select(Some(i));
     }
 
     /// Move to previous item
@@ -129,7 +129,7 @@ impl App {
             return;
         }
 
-        let i = match self.list_state.selected() {
+        let i = match self.table_state.selected() {
             Some(i) => {
                 if i == 0 {
                     self.repos.len() - 1
@@ -139,30 +139,37 @@ impl App {
             }
             None => 0,
         };
-        self.list_state.select(Some(i));
+        self.table_state.select(Some(i));
     }
 
     /// Render the UI
     fn render(&mut self, f: &mut Frame) {
         let chunks = Layout::vertical([
-            Constraint::Min(1),    // Main list
+            Constraint::Min(1),    // Main table
             Constraint::Length(1), // Status bar
         ])
         .split(f.area());
 
-        self.render_list(f, chunks[0]);
+        self.render_table(f, chunks[0]);
         self.render_status_bar(f, chunks[1]);
     }
 
-    /// Render the repository list
-    fn render_list(&mut self, f: &mut Frame, area: Rect) {
-        let items: Vec<ListItem> = self
+    /// Render the repository table
+    fn render_table(&mut self, f: &mut Frame, area: Rect) {
+        let header = Row::new(vec!["Repository", "Branch"])
+            .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            .bottom_margin(1);
+
+        let rows: Vec<Row> = self
             .repos
             .iter()
-            .map(|repo| ListItem::new(repo.display_short()))
+            .map(|repo| Row::new(vec![repo.display_short(), repo.branch()]))
             .collect();
 
-        let list = List::new(items)
+        let widths = [Constraint::Percentage(50), Constraint::Percentage(50)];
+
+        let table = Table::new(rows, widths)
+            .header(header)
             .block(
                 Block::default()
                     .title(format!(" Git Repositories - {} ", self.scan_path))
@@ -170,14 +177,14 @@ impl App {
                     .border_style(Style::default().fg(Color::Cyan))
                     .style(Style::default()),
             )
-            .highlight_style(
+            .row_highlight_style(
                 Style::default()
                     .bg(Color::DarkGray)
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("> ");
 
-        f.render_stateful_widget(list, area, &mut self.list_state);
+        f.render_stateful_widget(table, area, &mut self.table_state);
     }
 
     /// Render the status bar

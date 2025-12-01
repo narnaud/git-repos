@@ -1,4 +1,5 @@
 use color_eyre::Result;
+use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
@@ -37,6 +38,29 @@ impl GitRepo {
             (None, Some(name)) => name.to_string(),
             _ => self.path.display().to_string(),
         }
+    }
+
+    /// Get the current branch name
+    pub fn branch(&self) -> String {
+        // Try to read .git/HEAD to get the current branch
+        let head_path = self.path.join(".git").join("HEAD");
+
+        if let Ok(content) = fs::read_to_string(&head_path) {
+            let content = content.trim();
+
+            // HEAD typically contains "ref: refs/heads/branch-name"
+            if let Some(branch_ref) = content.strip_prefix("ref: refs/heads/") {
+                return branch_ref.to_string();
+            }
+
+            // If it's a detached HEAD, show first 7 chars of commit hash
+            if content.len() >= 7 {
+                return format!("detached@{}", &content[..7]);
+            }
+        }
+
+        // Fallback if we can't determine the branch
+        "unknown".to_string()
     }
 }
 
