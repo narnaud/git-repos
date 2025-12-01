@@ -3,15 +3,15 @@ use color_eyre::Result;
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{
+    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, ListState},
-    Frame, Terminal,
 };
 use std::io;
 use std::path::Path;
@@ -35,7 +35,10 @@ impl App {
         // Convert to normal path display (strip \\?\ prefix on Windows)
         let path_str = scan_path.display().to_string();
         let display_path = if cfg!(windows) && path_str.starts_with(r"\\?\") {
-            path_str.strip_prefix(r"\\?\").unwrap_or(&path_str).to_string()
+            path_str
+                .strip_prefix(r"\\?\")
+                .unwrap_or(&path_str)
+                .to_string()
         } else {
             path_str
         };
@@ -79,23 +82,23 @@ impl App {
 
     /// Handle terminal events
     fn handle_events(&mut self) -> Result<()> {
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press {
-                match key.code {
-                    KeyCode::Char('q') | KeyCode::Char('Q') => {
-                        self.should_quit = true;
-                    }
-                    KeyCode::Char('c') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
-                        self.should_quit = true;
-                    }
-                    KeyCode::Down | KeyCode::Char('j') => {
-                        self.next();
-                    }
-                    KeyCode::Up | KeyCode::Char('k') => {
-                        self.previous();
-                    }
-                    _ => {}
+        if let Event::Key(key) = event::read()?
+            && key.kind == KeyEventKind::Press
+        {
+            match key.code {
+                KeyCode::Char('q') | KeyCode::Char('Q') => {
+                    self.should_quit = true;
                 }
+                KeyCode::Char('c') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                    self.should_quit = true;
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    self.next();
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    self.previous();
+                }
+                _ => {}
             }
         }
         Ok(())
@@ -142,8 +145,8 @@ impl App {
     /// Render the UI
     fn render(&mut self, f: &mut Frame) {
         let chunks = Layout::vertical([
-            Constraint::Min(1),      // Main list
-            Constraint::Length(1),   // Status bar
+            Constraint::Min(1),    // Main list
+            Constraint::Length(1), // Status bar
         ])
         .split(f.area());
 
@@ -185,12 +188,10 @@ impl App {
             format!("Found {} repositories", self.repos.len())
         };
 
-        let status_text = Line::from(vec![
-            Span::styled(
-                format!("{} | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C", repo_count),
-                Style::default().fg(Color::Cyan),
-            ),
-        ]);
+        let status_text = Line::from(vec![Span::styled(
+            format!("{} | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C", repo_count),
+            Style::default().fg(Color::Cyan),
+        )]);
 
         f.render_widget(status_text, area);
     }

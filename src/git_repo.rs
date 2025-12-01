@@ -64,7 +64,8 @@ pub fn find_git_repos(root: &Path) -> Result<Vec<GitRepo>> {
         }
         // Skip if parent directory is a git repo
         if let Some(parent) = e.path().parent()
-            && parent != root && is_git_repo(parent)
+            && parent != root
+            && is_git_repo(parent)
         {
             return false;
         }

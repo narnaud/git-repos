@@ -15,6 +15,8 @@ When you add a new feature or fix a bug, follow these phases:
 3. **Action Phase**: Implement the agreed-upon solution after user approval.
 4. **Summary Phase**: Write a brief summary of what was discussed, decided, and done.
 
+Always test code quality before committing changes.
+
 ## Commit Message Guidelines
 - Use imperative mood (e.g., "Add feature", "Fix bug")
 - Use concise and descriptive messages
