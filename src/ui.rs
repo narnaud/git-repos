@@ -24,16 +24,26 @@ impl Widget for &mut App {
 impl App {
     /// Render the repository table
     fn render_table(&mut self, area: Rect, buf: &mut Buffer) {
-        let header = Row::new(vec!["Repository", "Branch"])
+        let header = Row::new(vec!["Repository", "Branch", "Remote Status"])
             .style(Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD));
 
         let rows: Vec<Row> = self
             .repos
             .iter()
-            .map(|repo| Row::new(vec![repo.display_short(), repo.branch()]))
+            .map(|repo| {
+                Row::new(vec![
+                    repo.display_short(),
+                    repo.branch().to_string(),
+                    repo.remote_status().to_string(),
+                ])
+            })
             .collect();
 
-        let widths = [Constraint::Percentage(50), Constraint::Percentage(50)];
+        let widths = [
+            Constraint::Percentage(40),
+            Constraint::Percentage(30),
+            Constraint::Percentage(30),
+        ];
 
         let table = Table::new(rows, widths)
             .header(header)
