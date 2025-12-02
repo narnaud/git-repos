@@ -10,6 +10,7 @@ pub struct GitRepo {
     path: PathBuf,
     branch: String,
     remote_status: String,
+    status: String,
 }
 
 impl GitRepo {
@@ -17,11 +18,13 @@ impl GitRepo {
     pub fn new(path: PathBuf) -> Self {
         let branch = Self::read_branch(&path);
         let remote_status = Self::read_remote_status(&path);
+        let status = Self::read_status(&path);
 
         Self {
             path,
             branch,
             remote_status,
+            status,
         }
     }
 
@@ -58,6 +61,11 @@ impl GitRepo {
     /// Get the remote tracking status (ahead/behind)
     pub fn remote_status(&self) -> &str {
         &self.remote_status
+    }
+
+    /// Get the working tree status
+    pub fn status(&self) -> &str {
+        &self.status
     }
 
     /// Read the current branch name from .git/HEAD
@@ -128,6 +136,51 @@ impl GitRepo {
 
         // No tracking branch or error
         "no-tracking".to_string()
+    }
+
+    /// Read the working tree status (clean/dirty)
+    fn read_status(path: &Path) -> String {
+        // Run git status --porcelain to check for changes
+        let output = Command::new("git")
+            .args(["status", "--porcelain"])
+            .current_dir(path)
+            .output();
+
+        if let Ok(output) = output
+            && output.status.success()
+        {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            if stdout.trim().is_empty() {
+                return "clean".to_string();
+            }
+
+            // Count staged and unstaged changes
+            let mut staged = 0;
+            let mut unstaged = 0;
+
+            for line in stdout.lines() {
+                if line.len() >= 2 {
+                    let index_status = &line[0..1];
+                    let work_tree_status = &line[1..2];
+
+                    if index_status != " " && index_status != "?" {
+                        staged += 1;
+                    }
+                    if work_tree_status != " " {
+                        unstaged += 1;
+                    }
+                }
+            }
+
+            match (staged, unstaged) {
+                (0, u) if u > 0 => format!("{}M", u),
+                (s, 0) if s > 0 => format!("{}S", s),
+                (s, u) if s > 0 && u > 0 => format!("{}S {}M", s, u),
+                _ => "dirty".to_string(),
+            }
+        } else {
+            "unknown".to_string()
+        }
     }
 }
 
