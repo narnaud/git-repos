@@ -4,7 +4,7 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Borders, Row, StatefulWidget, Table, Widget},
+    widgets::{Block, Borders, Cell, Row, StatefulWidget, Table, Widget},
 };
 
 /// Widget implementation for App
@@ -31,11 +31,27 @@ impl App {
             .repos
             .iter()
             .map(|repo| {
+                let remote_status = repo.remote_status();
+                let remote_color = match remote_status {
+                    "local-only" => Color::Gray,
+                    "up-to-date" => Color::Green,
+                    "no-tracking" => Color::Yellow,
+                    _ if remote_status.contains('↑') || remote_status.contains('↓') => Color::Cyan,
+                    _ => Color::White,
+                };
+
+                let status = repo.status();
+                let status_color = match status {
+                    "clean" => Color::Green,
+                    "unknown" => Color::Gray,
+                    _ => Color::Yellow,
+                };
+
                 Row::new(vec![
-                    repo.display_short(),
-                    repo.branch().to_string(),
-                    repo.remote_status().to_string(),
-                    repo.status().to_string(),
+                    Cell::from(repo.display_short()),
+                    Cell::from(repo.branch()),
+                    Cell::from(remote_status).fg(remote_color),
+                    Cell::from(status).fg(status_color),
                 ])
             })
             .collect();
