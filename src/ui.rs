@@ -32,26 +32,30 @@ impl App {
             .iter()
             .map(|repo| {
                 let remote_status = repo.remote_status();
-                let remote_color = match remote_status {
-                    "local-only" => Color::Gray,
-                    "up-to-date" => Color::Green,
-                    "no-tracking" => Color::Yellow,
-                    _ if remote_status.contains('↑') || remote_status.contains('↓') => Color::Cyan,
-                    _ => Color::White,
+                let (remote_text, remote_color) = match remote_status {
+                    "loading..." => (format!("⟳ {}", remote_status), Color::Gray),
+                    "local-only" => (remote_status.to_string(), Color::Red),
+                    "up-to-date" => (remote_status.to_string(), Color::Green),
+                    "no-tracking" => (remote_status.to_string(), Color::Yellow),
+                    _ if remote_status.contains('↑') || remote_status.contains('↓') => {
+                        (remote_status.to_string(), Color::Cyan)
+                    }
+                    _ => (remote_status.to_string(), Color::White),
                 };
 
                 let status = repo.status();
-                let status_color = match status {
-                    "clean" => Color::Green,
-                    "unknown" => Color::Gray,
-                    _ => Color::Yellow,
+                let (status_text, status_color) = match status {
+                    "loading..." => (format!("⟳ {}", status), Color::Gray),
+                    "clean" => (status.to_string(), Color::Green),
+                    "unknown" => (status.to_string(), Color::Gray),
+                    _ => (status.to_string(), Color::Yellow),
                 };
 
                 Row::new(vec![
                     Cell::from(repo.display_short()),
                     Cell::from(repo.branch()),
-                    Cell::from(remote_status).fg(remote_color),
-                    Cell::from(status).fg(status_color),
+                    Cell::from(remote_text).fg(remote_color),
+                    Cell::from(status_text).fg(status_color),
                 ])
             })
             .collect();
