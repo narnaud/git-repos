@@ -9,23 +9,36 @@ use walkdir::WalkDir;
 pub struct GitRepo {
     path: PathBuf,
     branch: String,
-    remote_status: String,
-    status: String,
+    remote_status: Option<String>,
+    status: Option<String>,
 }
 
 impl GitRepo {
-    /// Create a new GitRepo from a path
+    /// Create a new GitRepo from a path (branch only, async fields are None)
     pub fn new(path: PathBuf) -> Self {
         let branch = Self::read_branch(&path);
-        let remote_status = Self::read_remote_status(&path);
-        let status = Self::read_status(&path);
 
         Self {
             path,
             branch,
-            remote_status,
-            status,
+            remote_status: None,
+            status: None,
         }
+    }
+
+    /// Update the remote status
+    pub fn set_remote_status(&mut self, remote_status: String) {
+        self.remote_status = Some(remote_status);
+    }
+
+    /// Update the working tree status
+    pub fn set_status(&mut self, status: String) {
+        self.status = Some(status);
+    }
+
+    /// Check if async data is loaded
+    pub fn is_loaded(&self) -> bool {
+        self.remote_status.is_some() && self.status.is_some()
     }
 
     /// Get the repository path
@@ -60,12 +73,12 @@ impl GitRepo {
 
     /// Get the remote tracking status (ahead/behind)
     pub fn remote_status(&self) -> &str {
-        &self.remote_status
+        self.remote_status.as_deref().unwrap_or("loading...")
     }
 
     /// Get the working tree status
     pub fn status(&self) -> &str {
-        &self.status
+        self.status.as_deref().unwrap_or("loading...")
     }
 
     /// Read the current branch name from .git/HEAD
@@ -92,7 +105,7 @@ impl GitRepo {
     }
 
     /// Read the remote tracking status (ahead/behind)
-    fn read_remote_status(path: &Path) -> String {
+    pub fn read_remote_status(path: &Path) -> String {
         // Check if there are any remotes configured
         let has_remote = Command::new("git")
             .args(["remote"])
@@ -139,7 +152,7 @@ impl GitRepo {
     }
 
     /// Read the working tree status (clean/dirty)
-    fn read_status(path: &Path) -> String {
+    pub fn read_status(path: &Path) -> String {
         // Run git status --porcelain to check for changes
         let output = Command::new("git")
             .args(["status", "--porcelain"])

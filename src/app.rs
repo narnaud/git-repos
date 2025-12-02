@@ -1,13 +1,15 @@
 use crate::git_repo::GitRepo;
 use color_eyre::Result;
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind},
+    event::{self, poll, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::CrosstermBackend, widgets::TableState, Terminal};
 use std::io;
 use std::path::Path;
+use std::sync::mpsc::Receiver;
+use std::time::Duration;
 
 /// Application state
 pub struct App {
@@ -15,11 +17,13 @@ pub struct App {
     pub scan_path: String,
     pub table_state: TableState,
     should_quit: bool,
+    needs_redraw: bool,
+    rx: Receiver<crate::GitDataUpdate>,
 }
 
 impl App {
     /// Create a new App instance
-    pub fn new(repos: Vec<GitRepo>, scan_path: &Path) -> Self {
+    pub fn new(repos: Vec<GitRepo>, scan_path: &Path, rx: Receiver<crate::GitDataUpdate>) -> Self {
         let mut table_state = TableState::default();
         if !repos.is_empty() {
             table_state.select(Some(0));
@@ -41,6 +45,8 @@ impl App {
             scan_path: display_path,
             table_state,
             should_quit: false,
+            needs_redraw: false,
+            rx,
         }
     }
 
@@ -67,8 +73,31 @@ impl App {
     /// Main event loop
     fn run_loop(&mut self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
         while !self.should_quit {
+            // Process any pending git data updates
+            while let Ok(update) = self.rx.try_recv() {
+                match update {
+                    crate::GitDataUpdate::RemoteStatus(idx, status) => {
+                        if let Some(repo) = self.repos.get_mut(idx) {
+                            repo.set_remote_status(status);
+                            self.needs_redraw = true;
+                        }
+                    }
+                    crate::GitDataUpdate::Status(idx, status) => {
+                        if let Some(repo) = self.repos.get_mut(idx) {
+                            repo.set_status(status);
+                            self.needs_redraw = true;
+                        }
+                    }
+                }
+            }
+
             terminal.draw(|f| f.render_widget(&mut *self, f.area()))?;
-            self.handle_events()?;
+            self.needs_redraw = false;
+
+            // Check for events with a timeout to allow periodic redraws
+            if poll(Duration::from_millis(100))? {
+                self.handle_events()?;
+            }
         }
         Ok(())
     }
