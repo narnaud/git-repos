@@ -24,9 +24,19 @@ impl FilterMode {
     pub fn next(&self) -> Self {
         match self {
             FilterMode::All => FilterMode::NeedsAttention,
-            FilterMode::NeedsAttention => FilterMode::Modified,
+            FilterMode::NeedsAttention => FilterMode::Behind,
+            FilterMode::Behind => FilterMode::Modified,
+            FilterMode::Modified => FilterMode::All,
+        }
+    }
+
+    /// Get the previous filter mode in the cycle
+    pub fn previous(&self) -> Self {
+        match self {
+            FilterMode::All => FilterMode::Modified,
             FilterMode::Modified => FilterMode::Behind,
-            FilterMode::Behind => FilterMode::All,
+            FilterMode::Behind => FilterMode::NeedsAttention,
+            FilterMode::NeedsAttention => FilterMode::All,
         }
     }
 
@@ -202,7 +212,12 @@ impl App {
                         KeyCode::Up | KeyCode::Char('k') => {
                             self.previous();
                         }
-                        KeyCode::Char('f') => {
+                        KeyCode::Char('[') => {
+                            self.filter_mode = self.filter_mode.previous();
+                            self.table_state.select(Some(0));
+                            self.needs_redraw = true;
+                        }
+                        KeyCode::Char(']') => {
                             self.filter_mode = self.filter_mode.next();
                             self.table_state.select(Some(0));
                             self.needs_redraw = true;

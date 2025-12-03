@@ -74,17 +74,37 @@ impl App {
             .header(header)
             .block(
                 Block::default()
-                    .title("") // Add a small padding on the left
                     .title(
-                        if self.filter_mode != crate::app::FilterMode::All {
-                            format!("Git Repositories - {} [Filter: {}]", self.scan_path, self.filter_mode.display_name())
-                                .bold()
-                                .light_blue()
-                        } else {
-                            format!("Git Repositories - {}", self.scan_path)
-                                .bold()
-                                .light_blue()
-                        }
+                        format!("Git Repositories - {}", self.scan_path)
+                            .bold()
+                            .light_blue(),
+                    )
+                    .title_bottom(
+                        Line::from(vec![
+                            if self.filter_mode == crate::app::FilterMode::All {
+                                Span::styled("All", Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD))
+                            } else {
+                                Span::styled("All", Style::default().fg(Color::White))
+                            },
+                            Span::raw(" - "),
+                            if self.filter_mode == crate::app::FilterMode::NeedsAttention {
+                                Span::styled("Needs Attention", Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD))
+                            } else {
+                                Span::styled("Needs Attention", Style::default().fg(Color::White))
+                            },
+                            Span::raw(" - "),
+                            if self.filter_mode == crate::app::FilterMode::Behind {
+                                Span::styled("Behind", Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD))
+                            } else {
+                                Span::styled("Behind", Style::default().fg(Color::White))
+                            },
+                            Span::raw(" - "),
+                            if self.filter_mode == crate::app::FilterMode::Modified {
+                                Span::styled("Modified", Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD))
+                            } else {
+                                Span::styled("Modified", Style::default().fg(Color::White))
+                            },
+                        ]).right_aligned()
                     )
                     .borders(Borders::ALL)
                     .border_type(ratatui::widgets::BorderType::Rounded)
@@ -145,14 +165,14 @@ impl App {
                     Span::styled(repo_count, Style::default().fg(Color::Cyan)),
                     Span::raw(" | "),
                     Span::styled(fetch_text, Style::default().fg(Color::Yellow)),
-                    Span::styled(" | Navigate: ↑/↓ or j/k | Filter: f | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                    Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
                 ])
             } else {
                 Line::from(vec![
                     Span::styled(search_display, Style::default().fg(Color::Yellow)),
                     Span::raw(" | "),
                     Span::styled(repo_count, Style::default().fg(Color::Cyan)),
-                    Span::styled(" | Navigate: ↑/↓ or j/k | Filter: f | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                    Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
                 ])
             }
         } else if !self.fetching_repos.is_empty() {
@@ -169,12 +189,12 @@ impl App {
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
                 Span::raw(" | "),
                 Span::styled(fetch_text, Style::default().fg(Color::Yellow)),
-                Span::styled(" | Navigate: ↑/↓ or j/k | Filter: f | Search: / | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
             ])
         } else {
             Line::from(vec![
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
-                Span::styled(" | Navigate: ↑/↓ or j/k | Filter: f | Search: / | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
             ])
         };
 
