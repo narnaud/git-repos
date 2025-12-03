@@ -195,6 +195,21 @@ impl GitRepo {
             "unknown".to_string()
         }
     }
+
+    /// Fetch from all remotes
+    pub fn fetch(path: &Path) -> Result<()> {
+        let output = Command::new("git")
+            .args(["fetch", "--all", "--prune"])
+            .current_dir(path)
+            .output()?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(color_eyre::eyre::eyre!("git fetch failed: {}", stderr));
+        }
+
+        Ok(())
+    }
 }
 
 /// Check if a directory is a git repository

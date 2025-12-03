@@ -8,6 +8,8 @@ use tokio::sync::mpsc;
 pub enum GitDataUpdate {
     RemoteStatus(usize, String),
     Status(usize, String),
+    FetchProgress(usize),
+    FetchComplete(usize),
 }
 
 /// Terminal event types
@@ -24,7 +26,7 @@ pub struct EventHandler {
 
 impl EventHandler {
     /// Create a new event handler and spawn git data loading tasks
-    pub fn new<F>(repo_count: usize, get_path: F) -> Self
+    pub fn new<F>(repo_count: usize, get_path: F, fetch_repos: bool) -> Self
     where
         F: Fn(usize) -> PathBuf + Send + 'static,
     {
@@ -34,6 +36,7 @@ impl EventHandler {
         for idx in 0..repo_count {
             let path = get_path(idx);
             let tx_clone = tx.clone();
+            let should_fetch = fetch_repos;
 
             tokio::spawn(async move {
                 // Load both remote status and working tree status
@@ -44,13 +47,39 @@ impl EventHandler {
                 .await
                 .unwrap_or_else(|_| "error".to_string());
 
-                let status =
-                    tokio::task::spawn_blocking(move || crate::git_repo::GitRepo::read_status(&path))
+                let status = tokio::task::spawn_blocking({
+                    let path = path.clone();
+                    move || crate::git_repo::GitRepo::read_status(&path)
+                })
+                .await
+                .unwrap_or_else(|_| "error".to_string());
+
+                let _ = tx_clone.send(GitDataUpdate::RemoteStatus(idx, remote_status.clone()));
+                let _ = tx_clone.send(GitDataUpdate::Status(idx, status));
+
+                // If fetch is enabled and repo has remote, fetch it
+                if should_fetch && remote_status != "local-only" && remote_status != "error" {
+                    let _ = tx_clone.send(GitDataUpdate::FetchProgress(idx));
+                    
+                    let fetch_result = tokio::task::spawn_blocking({
+                        let path = path.clone();
+                        move || crate::git_repo::GitRepo::fetch(&path)
+                    })
+                    .await;
+
+                    if fetch_result.is_ok() {
+                        // Re-read remote status after fetch
+                        let new_remote_status = tokio::task::spawn_blocking(move || {
+                            crate::git_repo::GitRepo::read_remote_status(&path)
+                        })
                         .await
                         .unwrap_or_else(|_| "error".to_string());
 
-                let _ = tx_clone.send(GitDataUpdate::RemoteStatus(idx, remote_status));
-                let _ = tx_clone.send(GitDataUpdate::Status(idx, status));
+                        let _ = tx_clone.send(GitDataUpdate::RemoteStatus(idx, new_remote_status));
+                    }
+                    
+                    let _ = tx_clone.send(GitDataUpdate::FetchComplete(idx));
+                }
             });
         }
         drop(tx); // Close sender

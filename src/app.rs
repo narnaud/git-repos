@@ -19,11 +19,13 @@ pub struct App {
     needs_redraw: bool,
     event_handler: EventHandler,
     pub selected_repo: Option<String>,
+    pub fetching_repos: Vec<usize>,
+    pub fetch_animation_frame: usize,
 }
 
 impl App {
     /// Create a new App instance
-    pub fn new(repos: Vec<GitRepo>, scan_path: &Path) -> Self {
+    pub fn new(repos: Vec<GitRepo>, scan_path: &Path, fetch: bool) -> Self {
         let mut table_state = TableState::default();
         if !repos.is_empty() {
             table_state.select(Some(0));
@@ -42,9 +44,11 @@ impl App {
 
         // Create event handler and spawn git data loading tasks
         let repos_clone = repos.clone();
-        let event_handler = EventHandler::new(repos.len(), move |idx| {
-            repos_clone[idx].path().to_path_buf()
-        });
+        let event_handler = EventHandler::new(
+            repos.len(),
+            move |idx| repos_clone[idx].path().to_path_buf(),
+            fetch,
+        );
 
         Self {
             repos,
@@ -54,6 +58,8 @@ impl App {
             needs_redraw: false,
             event_handler,
             selected_repo: None,
+            fetching_repos: Vec::new(),
+            fetch_animation_frame: 0,
         }
     }
 
@@ -79,6 +85,9 @@ impl App {
 
     /// Main event loop
     async fn run_loop(&mut self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
+        // Create a timer for animation updates
+        let mut animation_interval = tokio::time::interval(tokio::time::Duration::from_millis(100));
+        
         loop {
             terminal.draw(|f| f.render_widget(&mut *self, f.area()))?;
             self.needs_redraw = false;
@@ -87,9 +96,19 @@ impl App {
                 break;
             }
 
-            // Wait for next event
-            if let Some(event) = self.event_handler.next().await? {
-                self.handle_event(event)?;
+            // Wait for next event or animation tick
+            tokio::select! {
+                result = self.event_handler.next() => {
+                    if let Some(event) = result? {
+                        self.handle_event(event)?;
+                    }
+                }
+                _ = animation_interval.tick() => {
+                    if !self.fetching_repos.is_empty() {
+                        self.fetch_animation_frame = (self.fetch_animation_frame + 1) % 10;
+                        self.needs_redraw = true;
+                    }
+                }
             }
         }
         Ok(())
@@ -135,6 +154,17 @@ impl App {
                         repo.set_status(status);
                         self.needs_redraw = true;
                     }
+                }
+                GitDataUpdate::FetchProgress(idx) => {
+                    if !self.fetching_repos.contains(&idx) {
+                        self.fetching_repos.push(idx);
+                        self.needs_redraw = true;
+                    }
+                }
+                GitDataUpdate::FetchComplete(idx) => {
+                    self.fetching_repos.retain(|&i| i != idx);
+                    self.fetch_animation_frame = (self.fetch_animation_frame + 1) % 10;
+                    self.needs_redraw = true;
                 }
             },
         }

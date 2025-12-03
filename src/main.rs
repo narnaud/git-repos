@@ -18,6 +18,10 @@ struct Args {
     /// Path to scan for git repositories (defaults to current directory)
     #[arg(default_value = ".")]
     path: PathBuf,
+
+    /// Skip automatic fetching of repositories with remotes
+    #[arg(long)]
+    no_fetch: bool,
 }
 
 #[tokio::main]
@@ -28,7 +32,7 @@ async fn main() -> Result<()> {
     let scan_path = args.path.canonicalize()?;
     let repos = find_git_repos(&scan_path)?;
 
-    let mut app = App::new(repos, &scan_path);
+    let mut app = App::new(repos, &scan_path, !args.no_fetch);
     app.run().await?;
 
     // If a repository was selected, change to that directory
