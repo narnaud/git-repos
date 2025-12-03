@@ -26,7 +26,7 @@ pub struct EventHandler {
 
 impl EventHandler {
     /// Create a new event handler and spawn git data loading tasks
-    pub fn new<F>(repo_count: usize, get_path: F, fetch_repos: bool) -> Self
+    pub fn new<F>(repo_count: usize, get_path: F, fetch_repos: bool, update_local: bool) -> Self
     where
         F: Fn(usize) -> PathBuf + Send + 'static,
     {
@@ -37,6 +37,7 @@ impl EventHandler {
             let path = get_path(idx);
             let tx_clone = tx.clone();
             let should_fetch = fetch_repos;
+            let should_update = update_local;
 
             tokio::spawn(async move {
                 // Load both remote status and working tree status
@@ -63,7 +64,7 @@ impl EventHandler {
 
                     let fetch_result = tokio::task::spawn_blocking({
                         let path = path.clone();
-                        move || crate::git_repo::GitRepo::fetch(&path)
+                        move || crate::git_repo::GitRepo::fetch(&path, should_update)
                     })
                     .await;
 

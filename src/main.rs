@@ -22,6 +22,10 @@ struct Args {
     /// Skip automatic fetching of repositories with remotes
     #[arg(long)]
     no_fetch: bool,
+
+    /// Update local branches with fast-forward merge after fetch
+    #[arg(short, long)]
+    update: bool,
 }
 
 #[tokio::main]
@@ -32,7 +36,7 @@ async fn main() -> Result<()> {
     let scan_path = args.path.canonicalize()?;
     let repos = find_git_repos(&scan_path)?;
 
-    let mut app = App::new(repos, &scan_path, !args.no_fetch);
+    let mut app = App::new(repos, &scan_path, !args.no_fetch, args.update);
     app.run().await?;
 
     // If a repository was selected, change to that directory

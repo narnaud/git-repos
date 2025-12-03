@@ -25,7 +25,7 @@ pub struct App {
 
 impl App {
     /// Create a new App instance
-    pub fn new(repos: Vec<GitRepo>, scan_path: &Path, fetch: bool) -> Self {
+    pub fn new(repos: Vec<GitRepo>, scan_path: &Path, fetch: bool, update: bool) -> Self {
         let mut table_state = TableState::default();
         if !repos.is_empty() {
             table_state.select(Some(0));
@@ -48,6 +48,7 @@ impl App {
             repos.len(),
             move |idx| repos_clone[idx].path().to_path_buf(),
             fetch,
+            update,
         );
 
         Self {
