@@ -100,10 +100,28 @@ impl App {
             format!("Found {} repositories", self.repos.len())
         };
 
-        let status_text = Line::from(vec![Span::styled(
-            format!("{} | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C", repo_count),
-            Style::default().fg(Color::Cyan),
-        )]);
+        let status_text = if !self.fetching_repos.is_empty() {
+            // Show fetch progress with animation
+            let spinner_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+            let spinner = spinner_chars[self.fetch_animation_frame % spinner_chars.len()];
+            let fetch_text = if self.fetching_repos.len() == 1 {
+                format!("{} Fetching 1 repository...", spinner)
+            } else {
+                format!("{} Fetching {} repositories...", spinner, self.fetching_repos.len())
+            };
+            
+            Line::from(vec![
+                Span::styled(repo_count, Style::default().fg(Color::Cyan)),
+                Span::raw(" | "),
+                Span::styled(fetch_text, Style::default().fg(Color::Yellow)),
+                Span::raw(" | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C"),
+            ])
+        } else {
+            Line::from(vec![
+                Span::styled(repo_count, Style::default().fg(Color::Cyan)),
+                Span::raw(" | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C"),
+            ])
+        };
 
         status_text.render(area, buf);
     }
