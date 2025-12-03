@@ -196,8 +196,9 @@ impl GitRepo {
         }
     }
 
-    /// Fetch from all remotes
+    /// Fetch from all remotes and fast-forward if possible
     pub fn fetch(path: &Path) -> Result<()> {
+        // First, fetch from all remotes
         let output = Command::new("git")
             .args(["fetch", "--all", "--prune"])
             .current_dir(path)
@@ -207,6 +208,17 @@ impl GitRepo {
             let stderr = String::from_utf8_lossy(&output.stderr);
             return Err(color_eyre::eyre::eyre!("git fetch failed: {}", stderr));
         }
+
+        // Try to fast-forward merge the current branch with its upstream
+        // This only succeeds if it's a clean fast-forward (no divergence)
+        let merge_output = Command::new("git")
+            .args(["merge", "--ff-only", "@{upstream}"])
+            .current_dir(path)
+            .output()?;
+
+        // Ignore merge errors - they just mean we can't fast-forward
+        // (e.g., diverged branches, local changes, etc.)
+        let _ = merge_output;
 
         Ok(())
     }
