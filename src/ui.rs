@@ -33,7 +33,7 @@ impl App {
             .map(|repo| {
                 let remote_status = repo.remote_status();
                 let (remote_text, remote_color) = match remote_status {
-                    "loading..." => (format!("⟳ {}", remote_status), Color::Gray),
+                    "loading..." => (format!("⟳ {}", remote_status), Color::DarkGray),
                     "local-only" => (remote_status.to_string(), Color::Red),
                     "up-to-date" => (remote_status.to_string(), Color::Green),
                     "no-tracking" => (remote_status.to_string(), Color::Yellow),
@@ -45,9 +45,9 @@ impl App {
 
                 let status = repo.status();
                 let (status_text, status_color) = match status {
-                    "loading..." => (format!("⟳ {}", status), Color::Gray),
+                    "loading..." => (format!("⟳ {}", status), Color::DarkGray),
                     "clean" => (status.to_string(), Color::Green),
-                    "unknown" => (status.to_string(), Color::Gray),
+                    "unknown" => (status.to_string(), Color::DarkGray),
                     _ => (status.to_string(), Color::Yellow),
                 };
 
@@ -114,12 +114,12 @@ impl App {
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
                 Span::raw(" | "),
                 Span::styled(fetch_text, Style::default().fg(Color::Yellow)),
-                Span::raw(" | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C"),
+                Span::styled(" | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
             ])
         } else {
             Line::from(vec![
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
-                Span::raw(" | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C"),
+                Span::styled(" | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
             ])
         };
 
