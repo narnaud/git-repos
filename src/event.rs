@@ -60,7 +60,7 @@ impl EventHandler {
                 // If fetch is enabled and repo has remote, fetch it
                 if should_fetch && remote_status != "local-only" && remote_status != "error" {
                     let _ = tx_clone.send(GitDataUpdate::FetchProgress(idx));
-                    
+
                     let fetch_result = tokio::task::spawn_blocking({
                         let path = path.clone();
                         move || crate::git_repo::GitRepo::fetch(&path)
@@ -77,7 +77,7 @@ impl EventHandler {
 
                         let _ = tx_clone.send(GitDataUpdate::RemoteStatus(idx, new_remote_status));
                     }
-                    
+
                     let _ = tx_clone.send(GitDataUpdate::FetchComplete(idx));
                 }
             });

@@ -87,7 +87,7 @@ impl App {
     async fn run_loop(&mut self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
         // Create a timer for animation updates
         let mut animation_interval = tokio::time::interval(tokio::time::Duration::from_millis(100));
-        
+
         loop {
             terminal.draw(|f| f.render_widget(&mut *self, f.area()))?;
             self.needs_redraw = false;

@@ -109,7 +109,7 @@ impl App {
             } else {
                 format!("{} Fetching {} repositories...", spinner, self.fetching_repos.len())
             };
-            
+
             Line::from(vec![
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
                 Span::raw(" | "),
