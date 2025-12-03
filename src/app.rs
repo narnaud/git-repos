@@ -10,6 +10,37 @@ use ratatui::{backend::CrosstermBackend, widgets::TableState, Terminal};
 use std::io;
 use std::path::Path;
 
+/// Filter mode for displaying repositories
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FilterMode {
+    All,
+    NeedsAttention,
+    Modified,
+    Behind,
+}
+
+impl FilterMode {
+    /// Get the next filter mode in the cycle
+    pub fn next(&self) -> Self {
+        match self {
+            FilterMode::All => FilterMode::NeedsAttention,
+            FilterMode::NeedsAttention => FilterMode::Modified,
+            FilterMode::Modified => FilterMode::Behind,
+            FilterMode::Behind => FilterMode::All,
+        }
+    }
+
+    /// Get display name for the filter mode
+    pub fn display_name(&self) -> &str {
+        match self {
+            FilterMode::All => "All",
+            FilterMode::NeedsAttention => "Needs Attention",
+            FilterMode::Modified => "Modified",
+            FilterMode::Behind => "Behind",
+        }
+    }
+}
+
 /// Application state
 pub struct App {
     pub repos: Vec<GitRepo>,
@@ -21,6 +52,7 @@ pub struct App {
     pub selected_repo: Option<String>,
     pub fetching_repos: Vec<usize>,
     pub fetch_animation_frame: usize,
+    pub filter_mode: FilterMode,
 }
 
 impl App {
@@ -61,6 +93,7 @@ impl App {
             selected_repo: None,
             fetching_repos: Vec::new(),
             fetch_animation_frame: 0,
+            filter_mode: FilterMode::All,
         }
     }
 
@@ -140,6 +173,11 @@ impl App {
                     KeyCode::Up | KeyCode::Char('k') => {
                         self.previous();
                     }
+                    KeyCode::Char('f') => {
+                        self.filter_mode = self.filter_mode.next();
+                        self.table_state.select(Some(0));
+                        self.needs_redraw = true;
+                    }
                     _ => {}
                 }
             }
@@ -172,41 +210,69 @@ impl App {
         Ok(())
     }
 
+    /// Get filtered list of repository indices based on current filter mode
+    pub fn filtered_repos(&self) -> Vec<usize> {
+        self.repos
+            .iter()
+            .enumerate()
+            .filter(|(_, repo)| {
+                match self.filter_mode {
+                    FilterMode::All => true,
+                    FilterMode::NeedsAttention => {
+                        // Show repos that are behind, modified, or have no tracking
+                        let remote = repo.remote_status();
+                        let status = repo.status();
+                        (remote.contains('↓') || remote == "no-tracking")
+                            || (status != "clean" && status != "loading...")
+                    }
+                    FilterMode::Modified => {
+                        let status = repo.status();
+                        status != "clean" && status != "loading..."
+                    }
+                    FilterMode::Behind => {
+                        let remote = repo.remote_status();
+                        remote.contains('↓')
+                    }
+                }
+            })
+            .map(|(idx, _)| idx)
+            .collect()
+    }
+
     /// Move to next item
     fn next(&mut self) {
-        if self.repos.is_empty() {
+        let filtered = self.filtered_repos();
+        if filtered.is_empty() {
             return;
         }
 
-        let i = match self.table_state.selected() {
-            Some(i) => {
-                if i >= self.repos.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
+        let current_selected = self.table_state.selected().unwrap_or(0);
+        let current_pos = filtered.iter().position(|&idx| idx == current_selected);
+
+        let next_pos = match current_pos {
+            Some(pos) if pos >= filtered.len() - 1 => 0,
+            Some(pos) => pos + 1,
             None => 0,
         };
-        self.table_state.select(Some(i));
+
+        self.table_state.select(Some(filtered[next_pos]));
     }
 
     /// Move to previous item
     fn previous(&mut self) {
-        if self.repos.is_empty() {
+        let filtered = self.filtered_repos();
+        if filtered.is_empty() {
             return;
         }
 
-        let i = match self.table_state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.repos.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
+        let current_selected = self.table_state.selected().unwrap_or(0);
+        let current_pos = filtered.iter().position(|&idx| idx == current_selected);
+
+        let prev_pos = match current_pos {
+            Some(0) | None => filtered.len() - 1,
+            Some(pos) => pos - 1,
         };
-        self.table_state.select(Some(i));
+
+        self.table_state.select(Some(filtered[prev_pos]));
     }
 }
