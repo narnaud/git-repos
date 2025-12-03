@@ -76,19 +76,8 @@ impl App {
                 Block::default()
                     .title("") // Add a small padding on the left
                     .title(
-                        if self.is_search_mode() {
-                            format!("Git Repositories - {} [Search: {}]", self.scan_path, self.search_query())
-                                .bold()
-                                .light_blue()
-                        } else if self.filter_mode != crate::app::FilterMode::All || !self.search_query().is_empty() {
-                            let mut title_parts = vec![format!("Git Repositories - {}", self.scan_path)];
-                            if self.filter_mode != crate::app::FilterMode::All {
-                                title_parts.push(format!("[Filter: {}]", self.filter_mode.display_name()));
-                            }
-                            if !self.search_query().is_empty() {
-                                title_parts.push(format!("[Search: {}]", self.search_query()));
-                            }
-                            title_parts.join(" ")
+                        if self.filter_mode != crate::app::FilterMode::All {
+                            format!("Git Repositories - {} [Filter: {}]", self.scan_path, self.filter_mode.display_name())
                                 .bold()
                                 .light_blue()
                         } else {
@@ -114,6 +103,16 @@ impl App {
 
     /// Render the status bar
     fn render_status_bar(&self, area: Rect, buf: &mut Buffer) {
+        // In search mode, show only the search prompt
+        if self.is_search_mode() {
+            let search_text = Line::from(vec![
+                Span::styled("Search: ", Style::default().fg(Color::Yellow)),
+                Span::styled(self.search_query(), Style::default().fg(Color::White)),
+            ]);
+            search_text.render(area, buf);
+            return;
+        }
+
         let filtered_count = self.filtered_repos().len();
         let total_count = self.repos.len();
 
@@ -127,7 +126,36 @@ impl App {
             format!("Showing {} of {} repositories", filtered_count, total_count)
         };
 
-        let status_text = if !self.fetching_repos.is_empty() {
+        let status_text = if !self.search_query().is_empty() {
+            // Show search at the bottom left when a search filter is active
+            let search_display = format!("Search: {} (press / to edit)", self.search_query());
+
+            if !self.fetching_repos.is_empty() {
+                let spinner_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+                let spinner = spinner_chars[self.fetch_animation_frame % spinner_chars.len()];
+                let fetch_text = if self.fetching_repos.len() == 1 {
+                    format!("{} Fetching 1 repository...", spinner)
+                } else {
+                    format!("{} Fetching {} repositories...", spinner, self.fetching_repos.len())
+                };
+
+                Line::from(vec![
+                    Span::styled(search_display, Style::default().fg(Color::Yellow)),
+                    Span::raw(" | "),
+                    Span::styled(repo_count, Style::default().fg(Color::Cyan)),
+                    Span::raw(" | "),
+                    Span::styled(fetch_text, Style::default().fg(Color::Yellow)),
+                    Span::styled(" | Navigate: ↑/↓ or j/k | Filter: f | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                ])
+            } else {
+                Line::from(vec![
+                    Span::styled(search_display, Style::default().fg(Color::Yellow)),
+                    Span::raw(" | "),
+                    Span::styled(repo_count, Style::default().fg(Color::Cyan)),
+                    Span::styled(" | Navigate: ↑/↓ or j/k | Filter: f | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                ])
+            }
+        } else if !self.fetching_repos.is_empty() {
             // Show fetch progress with animation
             let spinner_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
             let spinner = spinner_chars[self.fetch_animation_frame % spinner_chars.len()];
