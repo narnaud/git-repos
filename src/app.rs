@@ -18,6 +18,7 @@ pub struct App {
     should_quit: bool,
     needs_redraw: bool,
     event_handler: EventHandler,
+    pub selected_repo: Option<String>,
 }
 
 impl App {
@@ -52,6 +53,7 @@ impl App {
             should_quit: false,
             needs_redraw: false,
             event_handler,
+            selected_repo: None,
         }
     }
 
@@ -103,6 +105,14 @@ impl App {
                     }
                     KeyCode::Char('c') if modifiers.contains(KeyModifiers::CONTROL) => {
                         self.should_quit = true;
+                    }
+                    KeyCode::Enter => {
+                        if let Some(selected) = self.table_state.selected()
+                            && let Some(repo) = self.repos.get(selected)
+                        {
+                            self.selected_repo = Some(repo.path().display().to_string());
+                            self.should_quit = true;
+                        }
                     }
                     KeyCode::Down | KeyCode::Char('j') => {
                         self.next();

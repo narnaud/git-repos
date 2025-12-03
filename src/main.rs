@@ -31,5 +31,10 @@ async fn main() -> Result<()> {
     let mut app = App::new(repos, &scan_path);
     app.run().await?;
 
+    // If a repository was selected, change to that directory
+    if let Some(repo_path) = app.selected_repo {
+        println!("{}", repo_path);
+    }
+
     Ok(())
 }
