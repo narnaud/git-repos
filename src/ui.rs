@@ -76,9 +76,26 @@ impl App {
                 Block::default()
                     .title("") // Add a small padding on the left
                     .title(
-                        format!("Git Repositories - {} [Filter: {}]", self.scan_path, self.filter_mode.display_name())
-                            .bold()
-                            .light_blue(),
+                        if self.is_search_mode() {
+                            format!("Git Repositories - {} [Search: {}]", self.scan_path, self.search_query())
+                                .bold()
+                                .light_blue()
+                        } else if self.filter_mode != crate::app::FilterMode::All || !self.search_query().is_empty() {
+                            let mut title_parts = vec![format!("Git Repositories - {}", self.scan_path)];
+                            if self.filter_mode != crate::app::FilterMode::All {
+                                title_parts.push(format!("[Filter: {}]", self.filter_mode.display_name()));
+                            }
+                            if !self.search_query().is_empty() {
+                                title_parts.push(format!("[Search: {}]", self.search_query()));
+                            }
+                            title_parts.join(" ")
+                                .bold()
+                                .light_blue()
+                        } else {
+                            format!("Git Repositories - {}", self.scan_path)
+                                .bold()
+                                .light_blue()
+                        }
                     )
                     .borders(Borders::ALL)
                     .border_type(ratatui::widgets::BorderType::Rounded)
@@ -99,7 +116,7 @@ impl App {
     fn render_status_bar(&self, area: Rect, buf: &mut Buffer) {
         let filtered_count = self.filtered_repos().len();
         let total_count = self.repos.len();
-        
+
         let repo_count = if filtered_count == total_count {
             if total_count == 1 {
                 "Found 1 repository".to_string()
@@ -124,12 +141,12 @@ impl App {
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
                 Span::raw(" | "),
                 Span::styled(fetch_text, Style::default().fg(Color::Yellow)),
-                Span::styled(" | Navigate: ↑/↓ or j/k | Filter: f | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                Span::styled(" | Navigate: ↑/↓ or j/k | Filter: f | Search: / | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
             ])
         } else {
             Line::from(vec![
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
-                Span::styled(" | Navigate: ↑/↓ or j/k | Filter: f | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                Span::styled(" | Navigate: ↑/↓ or j/k | Filter: f | Search: / | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
             ])
         };
 

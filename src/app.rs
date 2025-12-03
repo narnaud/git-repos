@@ -53,6 +53,8 @@ pub struct App {
     pub fetching_repos: Vec<usize>,
     pub fetch_animation_frame: usize,
     pub filter_mode: FilterMode,
+    search_query: String,
+    search_mode: bool,
 }
 
 impl App {
@@ -94,6 +96,8 @@ impl App {
             fetching_repos: Vec::new(),
             fetch_animation_frame: 0,
             filter_mode: FilterMode::All,
+            search_query: String::new(),
+            search_mode: false,
         }
     }
 
@@ -152,33 +156,64 @@ impl App {
     fn handle_event(&mut self, event: TerminalEvent) -> Result<()> {
         match event {
             TerminalEvent::Key(code, modifiers) => {
-                match code {
-                    KeyCode::Char('q') | KeyCode::Char('Q') => {
-                        self.should_quit = true;
+                if self.search_mode {
+                    match code {
+                        KeyCode::Esc => {
+                            self.search_mode = false;
+                            self.search_query.clear();
+                            self.table_state.select(Some(0));
+                            self.needs_redraw = true;
+                        }
+                        KeyCode::Enter => {
+                            self.search_mode = false;
+                            self.needs_redraw = true;
+                        }
+                        KeyCode::Backspace => {
+                            self.search_query.pop();
+                            self.table_state.select(Some(0));
+                            self.needs_redraw = true;
+                        }
+                        KeyCode::Char(c) => {
+                            self.search_query.push(c);
+                            self.table_state.select(Some(0));
+                            self.needs_redraw = true;
+                        }
+                        _ => {}
                     }
-                    KeyCode::Char('c') if modifiers.contains(KeyModifiers::CONTROL) => {
-                        self.should_quit = true;
-                    }
-                    KeyCode::Enter => {
-                        if let Some(selected) = self.table_state.selected()
-                            && let Some(repo) = self.repos.get(selected)
-                        {
-                            self.selected_repo = Some(repo.path().display().to_string());
+                } else {
+                    match code {
+                        KeyCode::Char('q') | KeyCode::Char('Q') => {
                             self.should_quit = true;
                         }
+                        KeyCode::Char('c') if modifiers.contains(KeyModifiers::CONTROL) => {
+                            self.should_quit = true;
+                        }
+                        KeyCode::Enter => {
+                            if let Some(selected) = self.table_state.selected()
+                                && let Some(repo) = self.repos.get(selected)
+                            {
+                                self.selected_repo = Some(repo.path().display().to_string());
+                                self.should_quit = true;
+                            }
+                        }
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            self.next();
+                        }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            self.previous();
+                        }
+                        KeyCode::Char('f') => {
+                            self.filter_mode = self.filter_mode.next();
+                            self.table_state.select(Some(0));
+                            self.needs_redraw = true;
+                        }
+                        KeyCode::Char('/') => {
+                            self.search_mode = true;
+                            self.search_query.clear();
+                            self.needs_redraw = true;
+                        }
+                        _ => {}
                     }
-                    KeyCode::Down | KeyCode::Char('j') => {
-                        self.next();
-                    }
-                    KeyCode::Up | KeyCode::Char('k') => {
-                        self.previous();
-                    }
-                    KeyCode::Char('f') => {
-                        self.filter_mode = self.filter_mode.next();
-                        self.table_state.select(Some(0));
-                        self.needs_redraw = true;
-                    }
-                    _ => {}
                 }
             }
             TerminalEvent::GitUpdate(update) => match update {
@@ -216,6 +251,22 @@ impl App {
             .iter()
             .enumerate()
             .filter(|(_, repo)| {
+                // Apply search filter
+                if !self.search_query.is_empty() {
+                    let query_lower = self.search_query.to_lowercase();
+                    let name_match = repo.name()
+                        .map(|n| n.to_lowercase().contains(&query_lower))
+                        .unwrap_or(false);
+                    let parent_match = repo.parent_name()
+                        .map(|p| p.to_lowercase().contains(&query_lower))
+                        .unwrap_or(false);
+
+                    if !name_match && !parent_match {
+                        return false;
+                    }
+                }
+
+                // Apply filter mode
                 match self.filter_mode {
                     FilterMode::All => true,
                     FilterMode::NeedsAttention => {
@@ -237,6 +288,16 @@ impl App {
             })
             .map(|(idx, _)| idx)
             .collect()
+    }
+
+    /// Check if search mode is active
+    pub fn is_search_mode(&self) -> bool {
+        self.search_mode
+    }
+
+    /// Get current search query
+    pub fn search_query(&self) -> &str {
+        &self.search_query
     }
 
     /// Move to next item
