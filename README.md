@@ -35,8 +35,12 @@ Git-Repos is a command-line tool with a Text User Interface (TUI) that helps you
 - 🎯 **Smart filtering** - Excludes nested repositories (submodules) for cleaner results
 - 📊 **Interactive TUI** - Beautiful table interface with rounded borders
 - 🌿 **Branch detection** - Shows the current branch for each repository
+- 📡 **Remote status** - Displays ahead/behind status, local-only, or up-to-date
+- 📝 **Working tree status** - Shows clean, modified, or staged changes
+- ⚡ **Async loading** - Fast startup with background data loading
+- 🎨 **Color-coded display** - Visual indicators for repository states
 - ⌨️ **Keyboard navigation** - Vim-style (j/k) and arrow key navigation
-- 🎨 **Color-coded display** - Light blue headers and white borders for clarity
+- 🚀 **Quick navigation** - Press Enter to change directory to selected repository
 - ⚡ **Fast and efficient** - Written in Rust for optimal performance
 
 ## Installation
@@ -70,33 +74,89 @@ The compiled binary will be in `target/release/git-repos.exe`
 ### Basic usage
 
 Scan the current directory:
+
 ```powershell
 git-repos
 ```
 
 Scan a specific directory:
+
 ```powershell
 git-repos D:\projects
+```
+
+### Shell integration (recommended)
+
+Since a program cannot change the shell's working directory, you need to use a wrapper function to enable the "change directory on Enter" feature.
+
+#### PowerShell
+
+Add this to your PowerShell profile (`$PROFILE`):
+
+```powershell
+function gr {
+    $path = git-repos $args
+    if ($LASTEXITCODE -eq 0 -and $path) {
+        Set-Location $path
+    }
+}
+```
+
+#### Bash/Zsh
+
+Add this to your `.bashrc` or `.zshrc`:
+
+```bash
+gr() {
+    local path=$(git-repos "$@")
+    if [ $? -eq 0 ] && [ -n "$path" ]; then
+        cd "$path"
+    fi
+}
+```
+
+Now you can use `gr` to interactively select and navigate to a repository:
+
+```powershell
+gr              # Scan current directory
+gr D:\projects  # Scan specific directory
 ```
 
 ### Keyboard controls
 
 - **↑/↓** or **j/k** - Navigate through the repository list
+- **Enter** - Change directory to selected repository (exits the app)
 - **q** or **Ctrl-C** - Quit the application
 
 ### Example output
 
-```
-╭─ Git Repositories - D:\projects ────────────────────────────────────╮
-│ Repository              │ Branch                                    │
-├─────────────────────────┼───────────────────────────────────────────┤
-│ > kdab/knut             │ main                                      │
-│   kdab/training-material│ develop                                   │
-│   narnaud/git-repos     │ main                                      │
-│   oss/ratatui           │ main                                      │
-╰─────────────────────────────────────────────────────────────────────╯
+```text
+╭─ Git Repositories - D:\projects ────────────────────────────────────────────────────────────╮
+│ Repository              │ Branch  │ Remote Status │ Status                                  │
+├─────────────────────────┼─────────┼───────────────┼─────────────────────────────────────────┤
+│ > kdab/knut             │ main    │ ↑2 ↓0         │ 3M                                      │
+│   kdab/training-material│ develop │ up-to-date    │ clean                                   │
+│   narnaud/git-repos     │ main    │ local-only    │ 1S 2M                                   │
+│   oss/ratatui           │ main    │ ⟳ loading...  │ clean                                   │
+╰─────────────────────────────────────────────────────────────────────────────────────────────╯
 Found 4 repositories | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C
 ```
+
+#### Color indicators
+
+**Remote Status:**
+
+- 🟢 Green - `up-to-date`
+- 🔵 Cyan - `↑X ↓Y` (ahead/behind)
+- 🟡 Yellow - `no-tracking`
+- 🔴 Red - `local-only`
+- ⚪ Gray - `⟳ loading...`
+
+**Working Tree Status:**
+
+- 🟢 Green - `clean`
+- 🟡 Yellow - `XM` (modified), `XS` (staged), `XS YM` (both)
+- ⚪ Gray - `⟳ loading...` or `unknown`
 
 ## Contributing
 
