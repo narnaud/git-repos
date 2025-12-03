@@ -38,6 +38,7 @@ Git-Repos is a command-line tool with a Text User Interface (TUI) that helps you
 - 📡 **Remote status** - Displays ahead/behind status, local-only, or up-to-date
 - 📝 **Working tree status** - Shows clean, modified, or staged changes
 - ⚡ **Async loading** - Fast startup with background data loading
+- 🔄 **Auto-fetch** - Optionally fetch all repositories with remotes asynchronously
 - 🎨 **Color-coded display** - Visual indicators for repository states
 - ⌨️ **Keyboard navigation** - Vim-style (j/k) and arrow key navigation
 - 🚀 **Quick navigation** - Press Enter to change directory to selected repository
@@ -84,6 +85,14 @@ Scan a specific directory:
 ```powershell
 git-repos D:\projects
 ```
+
+By default, the tool automatically fetches all repositories with remotes. To disable this:
+
+```powershell
+git-repos --no-fetch
+```
+
+When auto-fetch is enabled (default), the tool runs `git fetch --all --prune` for each repository that has a remote configured. A spinner animation in the status bar shows the progress.
 
 ### Shell integration (recommended)
 
@@ -139,7 +148,7 @@ gr D:\projects  # Scan specific directory
 │   narnaud/git-repos     │ main    │ local-only    │ 1S 2M                                   │
 │   oss/ratatui           │ main    │ ⟳ loading...  │ clean                                   │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────╯
-Found 4 repositories | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C
+Found 4 repositories | ⠋ Fetching 2 repositories... | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C
 ```
 
 #### Color indicators
