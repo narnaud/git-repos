@@ -1,5 +1,7 @@
 # Git-Repos - 🔍 Scan and manage git repositories
 
+![Demo](assets/demo.gif)
+
 ## About This Project
 
 This project is an **experimentation** built entirely using **vibe-coding** with GitHub Copilot. The goal was to explore how easy it is to develop a complete TUI application using only AI assistance, and to evaluate whether the resulting code is maintainable and follows good practices.
@@ -37,8 +39,12 @@ Git-Repos is a command-line tool with a Text User Interface (TUI) that helps you
 - 🌿 **Branch detection** - Shows the current branch for each repository
 - 📡 **Remote status** - Displays ahead/behind status, local-only, or up-to-date
 - 📝 **Working tree status** - Shows clean, modified, or staged changes
+- 📅 **Last commit info** - Display last commit time (relative) and author
 - ⚡ **Async loading** - Fast startup with background data loading
-- 🔄 **Auto-fetch** - Optionally fetch all repositories with remotes asynchronously
+- 🔄 **Auto-fetch** - Automatically fetch all repositories with remotes asynchronously
+- 🔀 **Auto-update** - Optionally fast-forward merge local branches after fetch
+- 🔍 **Search filter** - Press `/` to search repositories by name
+- 📋 **View modes** - Filter repositories by: All, Needs Attention, Behind, Modified
 - 🎨 **Color-coded display** - Visual indicators for repository states
 - ⌨️ **Keyboard navigation** - Vim-style (j/k) and arrow key navigation
 - 🚀 **Quick navigation** - Press Enter to change directory to selected repository
@@ -92,7 +98,13 @@ By default, the tool automatically fetches all repositories with remotes. To dis
 git-repos --no-fetch
 ```
 
-When auto-fetch is enabled (default), the tool runs `git fetch --all --prune` for each repository that has a remote configured. A spinner animation in the status bar shows the progress.
+To also update local branches with fast-forward merge after fetching:
+
+```powershell
+git-repos --update
+```
+
+When auto-fetch is enabled (default), the tool runs `git fetch --all --prune` for each repository that has a remote configured. A spinner animation in the status bar shows the progress. With `--update`, it also performs `git merge --ff-only` to update local branches when possible.
 
 ### Shell integration (recommended)
 
@@ -134,21 +146,34 @@ gr D:\projects  # Scan specific directory
 ### Keyboard controls
 
 - **↑/↓** or **j/k** - Navigate through the repository list
+- **[** / **]** - Switch between view modes (All, Needs Attention, Behind, Modified)
+- **/** - Enter search mode to filter repositories by name
+- **Esc** - Exit search mode and clear search filter
 - **Enter** - Change directory to selected repository (exits the app)
 - **q** or **Ctrl-C** - Quit the application
+
+### View Modes
+
+- **All** - Show all repositories
+- **Needs Attention** - Show repositories that are behind, modified, or have no tracking branch
+- **Behind** - Show only repositories that are behind their upstream
+- **Modified** - Show only repositories with uncommitted changes
+
+The current mode is highlighted at the bottom right of the table.
 
 ### Example output
 
 ```text
-╭─ Git Repositories - D:\projects ────────────────────────────────────────────────────────────╮
-│ Repository              │ Branch  │ Remote Status │ Status                                  │
-├─────────────────────────┼─────────┼───────────────┼─────────────────────────────────────────┤
-│ > kdab/knut             │ main    │ ↑2 ↓0         │ 3M                                      │
-│   kdab/training-material│ develop │ up-to-date    │ clean                                   │
-│   narnaud/git-repos     │ main    │ local-only    │ 1S 2M                                   │
-│   oss/ratatui           │ main    │ ⟳ loading...  │ clean                                   │
-╰─────────────────────────────────────────────────────────────────────────────────────────────╯
-Found 4 repositories | ⠋ Fetching 2 repositories... | Navigate: ↑/↓ or j/k | Quit: q or Ctrl-C
+╭─ Git Repositories - D:\projects ────────────────────────────────────────────────────────────────────────╮
+│ Repository              │ Branch  │ Remote Status │ Status     │ Last Commit                          │
+├─────────────────────────┼─────────┼───────────────┼────────────┼──────────────────────────────────────┤
+│ > kdab/knut             │ main    │ ↑2 ↓0         │ 3M         │ 2 days ago by John Doe               │
+│   kdab/training-material│ develop │ up-to-date    │ clean      │ 1 week ago by Jane Smith             │
+│   narnaud/git-repos     │ main    │ local-only    │ 1S 2M      │ 5 minutes ago by Nicolas Arnaud      │
+│   oss/ratatui           │ main    │ ⟳ loading...  │ clean      │ ⟳ loading...                         │
+├─────────────────────────┴─────────┴───────────────┴────────────┴──All─[Needs Attention]─Behind─Modified┤
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+Found 4 repositories | ⠋ Fetching 2 repositories... | Mode: [/] | Search: / | Quit: q or Ctrl-C
 ```
 
 #### Color indicators
@@ -159,13 +184,13 @@ Found 4 repositories | ⠋ Fetching 2 repositories... | Navigate: ↑/↓ or j/k
 - 🔵 Cyan - `↑X ↓Y` (ahead/behind)
 - 🟡 Yellow - `no-tracking`
 - 🔴 Red - `local-only`
-- ⚪ Gray - `⟳ loading...`
+- ⚫ DarkGray - `⟳ loading...`
 
 **Working Tree Status:**
 
 - 🟢 Green - `clean`
 - 🟡 Yellow - `XM` (modified), `XS` (staged), `XS YM` (both)
-- ⚪ Gray - `⟳ loading...` or `unknown`
+- ⚫ DarkGray - `⟳ loading...` or `unknown`
 
 ## Contributing
 
