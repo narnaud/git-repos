@@ -93,6 +93,21 @@ fn determine_scan_path(args_path: Option<PathBuf>, settings: &Settings) -> Resul
     }
 }
 
+/// Load repositories, merging with cache if scanning root directory
+fn load_repos(scan_path: &Path, root_path: Option<&Path>) -> (Vec<GitRepo>, bool) {
+    let mut repos = find_git_repos(scan_path);
+    let is_root = if let Some(root) = root_path
+        && scan_path == root
+    {
+        let cached = load_repo_cache().unwrap_or_default();
+        merge_with_cache(&mut repos, root, &cached);
+        true
+    } else {
+        false
+    };
+    (repos, is_root)
+}
+
 /// Clean a path by removing Windows \\?\ prefix
 fn clean_path(path: &Path) -> PathBuf {
     if let Some(path_str) = path.to_str()
@@ -145,22 +160,9 @@ fn build_cache_from_repos(repos: &[GitRepo], root_path: &Path) -> Vec<CachedRepo
     cache
 }
 
-/// Merge discovered repos with cached repos
+/// Merge discovered repos with cached repos by adding missing repos
 fn merge_with_cache(repos: &mut Vec<GitRepo>, root_path: &Path, cached_repos: &[CachedRepo]) {
     let existing_paths = build_existing_paths(repos, root_path);
-
-    // Merge cached data with existing repos
-    for repo in repos.iter_mut() {
-        if let Some(relative_path) = get_relative_path(repo.path(), root_path)
-            && let Some(cached) = cached_repos.iter().find(|c| c.path == relative_path)
-            && repo.get_remote_url().is_none()
-            && cached.remote.is_some()
-        {
-            repo.set_remote_url(cached.remote.clone());
-        }
-    }
-
-    // Add missing repos from cache
     add_missing_repos(repos, cached_repos, &existing_paths, root_path);
 }
 
@@ -183,28 +185,13 @@ async fn main() -> Result<()> {
     // Load settings
     let settings = Settings::load()?;
 
-    // Determine scan path and configuration
+    // Determine scan path and load repositories
     let scan_path = determine_scan_path(args.path, &settings)?;
-    let mut repos = find_git_repos(&scan_path);
+    let (repos, is_root) = load_repos(&scan_path, settings.root_path.as_deref());
     let update_enabled = args.update || settings.update_by_default;
 
-    // If scanning the root directory, merge with cache
-    let is_root = if let Some(root_path) = &settings.root_path
-        && &scan_path == root_path
-    {
-        let cached = load_repo_cache().unwrap_or_default();
-        merge_with_cache(&mut repos, root_path, &cached);
-        true
-    } else {
-        false
-    };
-
     // Run the TUI
-    let root_for_app = if is_root {
-        settings.root_path.clone()
-    } else {
-        None
-    };
+    let root_for_app = is_root.then(|| settings.root_path.clone()).flatten();
     let mut app = App::new_with_root(repos, &scan_path, !args.no_fetch, update_enabled, root_for_app);
     app.run().await?;
 
