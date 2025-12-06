@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.2.0](https://github.com/narnaud/git-repos/compare/v0.1.0...v0.2.0) (2025-12-06)
+
+
+### Features ✨
+
+* add 'd' key to status bar help text ([4a9e0ac](https://github.com/narnaud/git-repos/commit/4a9e0ac339527b700353fc5e4c91c8917ba3aa70))
+* add animated deletion progress indicator ([ad7c330](https://github.com/narnaud/git-repos/commit/ad7c330cbfabaffa26084e765e1e205d94242ae0))
+* add clone command for missing repositories ([cc6fce7](https://github.com/narnaud/git-repos/commit/cc6fce7bef6d6b15d97eb0ce3874bc3f81c44a80))
+* add cloning progress indicator with animation ([d549611](https://github.com/narnaud/git-repos/commit/d54961139012e136f7e31f05a2ec0ef9813f719d))
+* add drop repository command with 'd' key ([ffe606e](https://github.com/narnaud/git-repos/commit/ffe606ec7790086b8ba61214f8f36101ae55bcf7))
+* add set command to configure default root directory ([072cc53](https://github.com/narnaud/git-repos/commit/072cc538d0d09fa390e53b8cfae0fc52820c3352))
+* add update_by_default setting to config ([4bbc25c](https://github.com/narnaud/git-repos/commit/4bbc25c8a559986a3c6eeaa17c38153b5ece9584))
+* load and merge repository cache with discovered repos ([e916c92](https://github.com/narnaud/git-repos/commit/e916c9288812070d0166c4f263a1c5fb4fa2414c))
+* mark deleted repositories as missing and sort by status ([6fbd0e1](https://github.com/narnaud/git-repos/commit/6fbd0e1e1215b2a980e2c86fc37e562c5cb98dfc))
+* save repository cache to YAML when scanning root directory ([134b5dc](https://github.com/narnaud/git-repos/commit/134b5dc8009c27fc96a859744c5d374ad14e0975))
+* update submodules after fast-forward merge ([afcc5aa](https://github.com/narnaud/git-repos/commit/afcc5aa46acb30f0dde2577ee93a60a0ec50407a))
+
+
+### Bug Fixes 🐞
+
+* correct repository index for git status updates after clone ([130691a](https://github.com/narnaud/git-repos/commit/130691a3da8ad389a02b25530cece4d7e7e6fb51))
+* improve missing repo visibility when selected ([5bdc4c5](https://github.com/narnaud/git-repos/commit/5bdc4c53ec0192d96823756f0c30539d727a7aeb))
+* preserve deleted repositories in cache across restarts ([5fa4c06](https://github.com/narnaud/git-repos/commit/5fa4c067fa6214593c624e916ce2e38e065cbc9c))
+* preserve remote URL when deleting repositories ([bcda150](https://github.com/narnaud/git-repos/commit/bcda15075e4405c2122d49419ba507eae20b9d94))
+* resort repositories after cloning ([f1702b4](https://github.com/narnaud/git-repos/commit/f1702b4dbc566de023cbf3b5fbbaf45e30df305f))
+
+
+### Documentation
+
+* update README with latest features and UI changes ([8f50196](https://github.com/narnaud/git-repos/commit/8f50196a68e198e70674d8cb3024dcee4791157c))
+* update README with new features ([c957d07](https://github.com/narnaud/git-repos/commit/c957d0706b92d94dd96250c1219f5c768798de95))
+
+
+### Changes
+
+* clean up GitRepo implementation ([8d716bb](https://github.com/narnaud/git-repos/commit/8d716bbe2a38c0742ae54363e84629de76f5304a))
+* extract cache logic into dedicated module ([7129ec2](https://github.com/narnaud/git-repos/commit/7129ec272fac9d24d576be6abd546c60bbd58588))
+* extract helper functions from main for better code organization ([1db28aa](https://github.com/narnaud/git-repos/commit/1db28aa7d9ab100040ed5718bac5b4778e50b2d3))
+* improve app.rs readability ([fbc26f8](https://github.com/narnaud/git-repos/commit/fbc26f80f2435f69a6ec182b726e5cafc34798d3))
+* simplify cache architecture ([562b81c](https://github.com/narnaud/git-repos/commit/562b81ce68c3cebd6c9d2b99f25595c951fca264))
+* simplify find_git_repos to use functional iterator chain ([97d4b39](https://github.com/narnaud/git-repos/commit/97d4b391d18db9569554ae37542a616486cad1e9))
+* simplify main.rs repo loading logic ([162c911](https://github.com/narnaud/git-repos/commit/162c911a7f4547a88de9ab2e215cd0b567fe9d87))
+
 ## 0.1.0 (2025-12-04)
 
 
