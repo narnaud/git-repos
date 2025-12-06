@@ -197,14 +197,22 @@ async fn main() -> Result<()> {
     let update_enabled = args.update || settings.update_by_default;
 
     // If scanning the root directory, merge with cache
-    if let Some(root_path) = &settings.root_path
+    let is_root = if let Some(root_path) = &settings.root_path
         && &scan_path == root_path
     {
         merge_with_cache(&mut repos, root_path)?;
-    }
+        true
+    } else {
+        false
+    };
 
     // Run the TUI
-    let mut app = App::new(repos, &scan_path, !args.no_fetch, update_enabled);
+    let root_for_app = if is_root {
+        settings.root_path.clone()
+    } else {
+        None
+    };
+    let mut app = App::new_with_root(repos, &scan_path, !args.no_fetch, update_enabled, root_for_app);
     app.run().await?;
 
     // If a repository was selected, change to that directory

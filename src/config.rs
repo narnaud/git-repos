@@ -114,3 +114,26 @@ pub fn load_repo_cache() -> Result<Vec<CachedRepo>> {
 
     Ok(repos)
 }
+
+/// Remove a repository from the cache by its relative path
+pub fn remove_from_cache(relative_path: &Path) -> Result<()> {
+    let mut cached_repos = load_repo_cache()?;
+    
+    // Remove the repo with matching path
+    cached_repos.retain(|repo| repo.path != relative_path);
+    
+    // Save updated cache
+    let config_dir = dirs::config_dir()
+        .ok_or_else(|| color_eyre::eyre::eyre!("Could not determine config directory"))?;
+    
+    let cache_path = config_dir.join("git-repos").join("repos.yaml");
+    
+    if let Some(parent) = cache_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    
+    let yaml = serde_yaml::to_string(&cached_repos)?;
+    fs::write(&cache_path, yaml)?;
+    
+    Ok(())
+}

@@ -65,11 +65,23 @@ pub struct App {
     pub filter_mode: FilterMode,
     search_query: String,
     search_mode: bool,
+    root_path: Option<std::path::PathBuf>,
 }
 
 impl App {
     /// Create a new App instance
     pub fn new(repos: Vec<GitRepo>, scan_path: &Path, fetch: bool, update: bool) -> Self {
+        Self::new_with_root(repos, scan_path, fetch, update, None)
+    }
+
+    /// Create a new App instance with optional root path
+    pub fn new_with_root(
+        repos: Vec<GitRepo>,
+        scan_path: &Path,
+        fetch: bool,
+        update: bool,
+        root_path: Option<std::path::PathBuf>,
+    ) -> Self {
         let mut table_state = TableState::default();
         if !repos.is_empty() {
             table_state.select(Some(0));
@@ -108,6 +120,7 @@ impl App {
             filter_mode: FilterMode::All,
             search_query: String::new(),
             search_mode: false,
+            root_path,
         }
     }
 
@@ -226,6 +239,9 @@ impl App {
                             self.search_mode = true;
                             self.search_query.clear();
                             self.needs_redraw = true;
+                        }
+                        KeyCode::Char('d') | KeyCode::Char('D') => {
+                            self.handle_drop_repo();
                         }
                         _ => {}
                     }
@@ -350,5 +366,69 @@ impl App {
         };
 
         self.table_state.select(Some(filtered[prev_pos]));
+    }
+
+    /// Handle dropping a repository
+    fn handle_drop_repo(&mut self) {
+        let Some(selected) = self.table_state.selected() else {
+            return;
+        };
+
+        let Some(repo) = self.repos.get(selected) else {
+            return;
+        };
+
+        if repo.is_missing() {
+            // Missing repo: remove from cache
+            if let Some(root_path) = &self.root_path {
+                let repo_path_str = repo.path().to_str().unwrap_or("");
+                let cleaned_path = if let Some(stripped) = repo_path_str.strip_prefix(r"\\?\") {
+                    std::path::PathBuf::from(stripped)
+                } else {
+                    repo.path().to_path_buf()
+                };
+
+                if let Ok(relative_path) = cleaned_path.strip_prefix(root_path)
+                    && crate::config::remove_from_cache(relative_path).is_ok()
+                {
+                    // Remove from repos list
+                    self.repos.remove(selected);
+                    
+                    // Adjust selection
+                    if !self.repos.is_empty() {
+                        let new_selected = if selected >= self.repos.len() {
+                            self.repos.len() - 1
+                        } else {
+                            selected
+                        };
+                        self.table_state.select(Some(new_selected));
+                    } else {
+                        self.table_state.select(None);
+                    }
+                    
+                    self.needs_redraw = true;
+                }
+            }
+        } else {
+            // Normal repo: delete directory
+            if std::fs::remove_dir_all(repo.path()).is_ok() {
+                // Keep in cache if we're in root mode, just remove from current list
+                self.repos.remove(selected);
+                
+                // Adjust selection
+                if !self.repos.is_empty() {
+                    let new_selected = if selected >= self.repos.len() {
+                        self.repos.len() - 1
+                    } else {
+                        selected
+                    };
+                    self.table_state.select(Some(new_selected));
+                } else {
+                    self.table_state.select(None);
+                }
+                
+                self.needs_redraw = true;
+            }
+        }
     }
 }
