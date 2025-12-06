@@ -12,6 +12,8 @@ pub enum GitDataUpdate {
     FetchComplete(usize),
     CloneProgress(usize),
     CloneComplete(usize),
+    DeleteProgress(usize),
+    DeleteComplete(usize),
 }
 
 /// Terminal event types

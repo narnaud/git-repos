@@ -62,6 +62,7 @@ pub struct App {
     pub selected_repo: Option<String>,
     pub fetching_repos: Vec<usize>,
     pub cloning_repos: Vec<usize>,
+    pub deleting_repos: Vec<usize>,
     pub fetch_animation_frame: usize,
     pub filter_mode: FilterMode,
     search_query: String,
@@ -131,6 +132,7 @@ impl App {
             selected_repo: None,
             fetching_repos: Vec::new(),
             cloning_repos: Vec::new(),
+            deleting_repos: Vec::new(),
             fetch_animation_frame: 0,
             filter_mode: FilterMode::All,
             search_query: String::new(),
@@ -180,7 +182,7 @@ impl App {
                     }
                 }
                 _ = animation_interval.tick() => {
-                    if !self.fetching_repos.is_empty() || !self.cloning_repos.is_empty() {
+                    if !self.fetching_repos.is_empty() || !self.cloning_repos.is_empty() || !self.deleting_repos.is_empty() {
                         self.fetch_animation_frame = (self.fetch_animation_frame + 1) % 10;
                         self.needs_redraw = true;
                     }
@@ -333,6 +335,46 @@ impl App {
 
                     self.needs_redraw = true;
                 }
+                GitDataUpdate::DeleteProgress(idx) => {
+                    if !self.deleting_repos.contains(&idx) {
+                        self.deleting_repos.push(idx);
+                        self.needs_redraw = true;
+                    }
+                }
+                GitDataUpdate::DeleteComplete(idx) => {
+                    self.deleting_repos.retain(|&i| i != idx);
+                    
+                    // Mark the repository as missing
+                    if let Some(repo) = self.repos.get_mut(idx) {
+                        let repo_path = repo.path().to_path_buf();
+                        repo.set_missing();
+
+                        // Sort repositories: existing first (by name), then missing (by name)
+                        self.repos.sort_by(|a, b| {
+                            match (a.is_missing(), b.is_missing()) {
+                                (false, true) => std::cmp::Ordering::Less,
+                                (true, false) => std::cmp::Ordering::Greater,
+                                _ => {
+                                    let a_name = a.display_short().to_lowercase();
+                                    let b_name = b.display_short().to_lowercase();
+                                    a_name.cmp(&b_name)
+                                }
+                            }
+                        });
+
+                        // Find the new index of the selected repo after sorting
+                        let new_idx = self.repos.iter()
+                            .enumerate()
+                            .find(|(_, r)| r.path() == repo_path)
+                            .map(|(idx, _)| idx);
+
+                        if let Some(idx) = new_idx {
+                            self.table_state.select(Some(idx));
+                        }
+                    }
+                    
+                    self.needs_redraw = true;
+                }
             },
         }
         Ok(())
@@ -475,38 +517,27 @@ impl App {
                 }
             }
         } else {
-            // Normal repo: delete directory and mark as missing
-            if std::fs::remove_dir_all(&repo_path).is_ok() {
-                // Mark the repository as missing instead of removing it
-                if let Some(repo) = self.repos.get_mut(selected) {
-                    repo.set_missing();
-                }
+            // Normal repo: delete directory asynchronously and mark as missing
+            self.deleting_repos.push(selected);
+            self.needs_redraw = true;
 
-                // Sort repositories: existing first (by name), then missing (by name)
-                self.repos.sort_by(|a, b| {
-                    match (a.is_missing(), b.is_missing()) {
-                        (false, true) => std::cmp::Ordering::Less,
-                        (true, false) => std::cmp::Ordering::Greater,
-                        _ => {
-                            let a_name = a.display_short().to_lowercase();
-                            let b_name = b.display_short().to_lowercase();
-                            a_name.cmp(&b_name)
-                        }
-                    }
-                });
+            let tx = self.event_handler.git_tx();
+            let idx = selected;
 
-                // Find the new index of the selected repo after sorting
-                let new_idx = self.repos.iter()
-                    .enumerate()
-                    .find(|(_, r)| r.path() == repo_path)
-                    .map(|(idx, _)| idx);
+            tokio::spawn(async move {
+                // Send delete progress
+                let _ = tx.send(GitDataUpdate::DeleteProgress(idx));
 
-                if let Some(idx) = new_idx {
-                    self.table_state.select(Some(idx));
-                }
+                // Perform deletion
+                let delete_result = tokio::task::spawn_blocking(move || {
+                    std::fs::remove_dir_all(&repo_path)
+                }).await;
 
-                self.needs_redraw = true;
-            }
+                // Send delete complete
+                let _ = tx.send(GitDataUpdate::DeleteComplete(idx));
+
+                drop(delete_result); // Ignore result
+            });
         }
     }
 

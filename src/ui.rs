@@ -160,7 +160,7 @@ impl App {
             // Show search at the bottom left when a search filter is active
             let search_display = format!("Search: {} (press / to edit)", self.search_query());
 
-            if !self.fetching_repos.is_empty() || !self.cloning_repos.is_empty() {
+            if !self.fetching_repos.is_empty() || !self.cloning_repos.is_empty() || !self.deleting_repos.is_empty() {
                 let spinner_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
                 let spinner = spinner_chars[self.fetch_animation_frame % spinner_chars.len()];
 
@@ -184,6 +184,15 @@ impl App {
                     progress_parts.push(clone_text);
                 }
 
+                if !self.deleting_repos.is_empty() {
+                    let delete_text = if self.deleting_repos.len() == 1 {
+                        format!("{} Deleting 1 repo", spinner)
+                    } else {
+                        format!("{} Deleting {} repos", spinner, self.deleting_repos.len())
+                    };
+                    progress_parts.push(delete_text);
+                }
+
                 let progress_text = progress_parts.join(", ");
 
                 Line::from(vec![
@@ -202,8 +211,8 @@ impl App {
                     Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Clone: c | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
                 ])
             }
-        } else if !self.fetching_repos.is_empty() || !self.cloning_repos.is_empty() {
-            // Show fetch/clone progress with animation
+        } else if !self.fetching_repos.is_empty() || !self.cloning_repos.is_empty() || !self.deleting_repos.is_empty() {
+            // Show fetch/clone/delete progress with animation
             let spinner_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
             let spinner = spinner_chars[self.fetch_animation_frame % spinner_chars.len()];
 
@@ -225,6 +234,15 @@ impl App {
                     format!("{} Cloning {} repos", spinner, self.cloning_repos.len())
                 };
                 progress_parts.push(clone_text);
+            }
+
+            if !self.deleting_repos.is_empty() {
+                let delete_text = if self.deleting_repos.len() == 1 {
+                    format!("{} Deleting 1 repo", spinner)
+                } else {
+                    format!("{} Deleting {} repos", spinner, self.deleting_repos.len())
+                };
+                progress_parts.push(delete_text);
             }
 
             let progress_text = progress_parts.join(", ");
