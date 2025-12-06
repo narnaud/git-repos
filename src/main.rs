@@ -55,6 +55,43 @@ enum SetCommand {
     },
 }
 
+fn handle_set_root(path: PathBuf) -> Result<()> {
+    let canonical_path = path.canonicalize()?;
+    let mut settings = Settings::load()?;
+    settings.set_root_path(canonical_path.clone())?;
+
+    // Display the cleaned path (without \\?\ prefix)
+    let display_path = if let Some(root) = &settings.root_path {
+        root.display().to_string()
+    } else {
+        canonical_path.display().to_string()
+    };
+    println!("Root path set to: {}", display_path);
+    Ok(())
+}
+
+fn handle_set_update(enabled: String) -> Result<()> {
+    let enabled_bool = enabled
+        .to_lowercase()
+        .parse::<bool>()
+        .map_err(|_| color_eyre::eyre::eyre!("Invalid value '{}'. Use 'true' or 'false'", enabled))?;
+
+    let mut settings = Settings::load()?;
+    settings.set_update(enabled_bool)?;
+    println!("Auto-update set to: {}", enabled_bool);
+    Ok(())
+}
+
+fn determine_scan_path(args_path: Option<PathBuf>, settings: &Settings) -> Result<PathBuf> {
+    if let Some(path) = args_path {
+        Ok(path.canonicalize()?)
+    } else if let Some(root_path) = &settings.root_path {
+        Ok(root_path.clone())
+    } else {
+        Ok(PathBuf::from(".").canonicalize()?)
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
@@ -63,51 +100,23 @@ async fn main() -> Result<()> {
 
     // Handle subcommands
     if let Some(command) = args.command {
-        match command {
+        return match command {
             Command::Set { setting } => match setting {
-                SetCommand::Root { path } => {
-                    let canonical_path = path.canonicalize()?;
-                    let mut settings = Settings::load()?;
-                    settings.set_root_path(canonical_path.clone())?;
-                    
-                    // Display the cleaned path (without \\?\ prefix)
-                    let display_path = if let Some(root) = &settings.root_path {
-                        root.display().to_string()
-                    } else {
-                        canonical_path.display().to_string()
-                    };
-                    println!("Root path set to: {}", display_path);
-                    return Ok(());
-                }
-                SetCommand::Update { enabled } => {
-                    let enabled_bool = enabled.to_lowercase().parse::<bool>()
-                        .map_err(|_| color_eyre::eyre::eyre!("Invalid value '{}'. Use 'true' or 'false'", enabled))?;
-                    let mut settings = Settings::load()?;
-                    settings.set_update(enabled_bool)?;
-                    println!("Auto-update set to: {}", enabled_bool);
-                    return Ok(());
-                }
+                SetCommand::Root { path } => handle_set_root(path),
+                SetCommand::Update { enabled } => handle_set_update(enabled),
             },
-        }
+        };
     }
 
-    // Load settings to get default root path
+    // Load settings
     let settings = Settings::load()?;
 
-    // Determine the path to scan: command line argument, configured root, or current directory
-    let scan_path = if let Some(path) = args.path {
-        path.canonicalize()?
-    } else if let Some(root_path) = settings.root_path {
-        root_path
-    } else {
-        PathBuf::from(".").canonicalize()?
-    };
-
+    // Determine scan path and configuration
+    let scan_path = determine_scan_path(args.path, &settings)?;
     let repos = find_git_repos(&scan_path)?;
-
-    // Determine if update should be enabled: CLI flag overrides setting
     let update_enabled = args.update || settings.update_by_default;
 
+    // Run the TUI
     let mut app = App::new(repos, &scan_path, !args.no_fetch, update_enabled);
     app.run().await?;
 
