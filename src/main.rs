@@ -139,7 +139,7 @@ fn build_cache_from_repos(repos: &[GitRepo], root_path: &Path) -> Vec<CachedRepo
             })
         })
         .collect();
-    
+
     // Sort alphabetically by path
     cache.sort_by(|a, b| a.path.cmp(&b.path));
     cache
@@ -148,7 +148,7 @@ fn build_cache_from_repos(repos: &[GitRepo], root_path: &Path) -> Vec<CachedRepo
 /// Merge discovered repos with cached repos
 fn merge_with_cache(repos: &mut Vec<GitRepo>, root_path: &Path, cached_repos: &[CachedRepo]) {
     let existing_paths = build_existing_paths(repos, root_path);
-    
+
     // Merge cached data with existing repos
     for repo in repos.iter_mut() {
         if let Some(relative_path) = get_relative_path(repo.path(), root_path)

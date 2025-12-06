@@ -312,29 +312,6 @@ impl App {
                         // Only refresh if the clone was successful (directory exists)
                         if path.exists() {
                             let new_repo = GitRepo::new(path.clone());
-
-                            // Spawn async task to load git data
-                            let tx = self.event_handler.git_tx();
-                            let path_clone = path.clone();
-                            tokio::spawn(async move {
-                                let remote_status = tokio::task::spawn_blocking({
-                                    let path = path_clone.clone();
-                                    move || GitRepo::read_remote_status(&path)
-                                })
-                                .await
-                                .unwrap_or_else(|_| "error".to_string());
-
-                                let status = tokio::task::spawn_blocking({
-                                    let path = path_clone.clone();
-                                    move || GitRepo::read_status(&path)
-                                })
-                                .await
-                                .unwrap_or_else(|_| "error".to_string());
-
-                                let _ = tx.send(GitDataUpdate::RemoteStatus(idx, remote_status));
-                                let _ = tx.send(GitDataUpdate::Status(idx, status));
-                            });
-
                             self.repos[idx] = new_repo;
 
                             // Sort repositories: existing first (by name), then missing (by name)
@@ -356,8 +333,30 @@ impl App {
                                 .find(|(_, r)| r.path() == path)
                                 .map(|(idx, _)| idx);
 
-                            if let Some(idx) = new_idx {
-                                self.table_state.select(Some(idx));
+                            if let Some(new_idx) = new_idx {
+                                self.table_state.select(Some(new_idx));
+
+                                // Spawn async task to load git data with the NEW index
+                                let tx = self.event_handler.git_tx();
+                                let path_clone = path.clone();
+                                tokio::spawn(async move {
+                                    let remote_status = tokio::task::spawn_blocking({
+                                        let path = path_clone.clone();
+                                        move || GitRepo::read_remote_status(&path)
+                                    })
+                                    .await
+                                    .unwrap_or_else(|_| "error".to_string());
+
+                                    let status = tokio::task::spawn_blocking({
+                                        let path = path_clone.clone();
+                                        move || GitRepo::read_status(&path)
+                                    })
+                                    .await
+                                    .unwrap_or_else(|_| "error".to_string());
+
+                                    let _ = tx.send(GitDataUpdate::RemoteStatus(new_idx, remote_status));
+                                    let _ = tx.send(GitDataUpdate::Status(new_idx, status));
+                                });
                             }
                         }
                     }
