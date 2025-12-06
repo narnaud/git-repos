@@ -217,9 +217,13 @@ impl GitRepo {
                 .current_dir(path)
                 .output()?;
 
-            // Ignore merge errors - they just mean we can't fast-forward
-            // (e.g., diverged branches, local changes, etc.)
-            let _ = merge_output;
+            // If merge succeeded, also update submodules
+            if merge_output.status.success() {
+                let _ = Command::new("git")
+                    .args(["submodule", "update", "--init", "--recursive"])
+                    .current_dir(path)
+                    .output();
+            }
         }
 
         Ok(())
