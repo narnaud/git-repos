@@ -28,19 +28,24 @@ impl App {
             .style(Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD));
 
         let filtered_indices = self.filtered_repos();
+        let selected_idx = self.table_state.selected();
+        
         let rows: Vec<Row> = self
             .repos
             .iter()
             .enumerate()
             .filter(|(idx, _)| filtered_indices.contains(idx))
-            .map(|(_, repo)| {
-                // If repo is missing, render everything in gray
+            .map(|(idx, repo)| {
+                // If repo is missing, render everything in gray (or white if selected)
                 if repo.is_missing() {
+                    let is_selected = selected_idx == Some(idx);
+                    let color = if is_selected { Color::White } else { Color::DarkGray };
+                    
                     return Row::new(vec![
-                        Cell::from(repo.display_short()).fg(Color::DarkGray),
-                        Cell::from("").fg(Color::DarkGray),
-                        Cell::from("missing").fg(Color::DarkGray),
-                        Cell::from("").fg(Color::DarkGray),
+                        Cell::from(repo.display_short()).fg(color),
+                        Cell::from("").fg(color),
+                        Cell::from("missing").fg(color),
+                        Cell::from("").fg(color),
                     ]);
                 }
 
