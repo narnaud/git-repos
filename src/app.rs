@@ -161,6 +161,11 @@ impl App {
         result
     }
 
+    /// Get the repositories (for saving cache)
+    pub fn repos(&self) -> &[GitRepo] {
+        &self.repos
+    }
+
     /// Main event loop
     async fn run_loop(&mut self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
         // Create a timer for animation updates
@@ -367,7 +372,7 @@ impl App {
                 }
                 GitDataUpdate::DeleteComplete(idx) => {
                     self.deleting_repos.retain(|&i| i != idx);
-                    
+
                     // Mark the repository as missing
                     if let Some(repo) = self.repos.get_mut(idx) {
                         let repo_path = repo.path().to_path_buf();
@@ -396,7 +401,7 @@ impl App {
                             self.table_state.select(Some(idx));
                         }
                     }
-                    
+
                     self.needs_redraw = true;
                 }
             },

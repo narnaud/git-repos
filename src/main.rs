@@ -132,11 +132,6 @@ fn build_updated_cache(repos: &[GitRepo], cached_repos: Vec<CachedRepo>, existin
     repos
         .iter()
         .filter_map(|repo| {
-            // Skip missing repos - they're already in the cache
-            if repo.is_missing() {
-                return None;
-            }
-
             // Get relative path from root
             let relative_path = get_relative_path(repo.path(), root_path)?;
 
@@ -146,7 +141,7 @@ fn build_updated_cache(repos: &[GitRepo], cached_repos: Vec<CachedRepo>, existin
             })
         })
         .chain(
-            // Keep cached repos that are missing
+            // Keep cached repos that are not already in repos list
             cached_repos.into_iter().filter(|c| !existing_paths.contains(&c.path))
         )
         .collect()
@@ -214,6 +209,24 @@ async fn main() -> Result<()> {
     };
     let mut app = App::new_with_root(repos, &scan_path, !args.no_fetch, update_enabled, root_for_app);
     app.run().await?;
+
+    // Save cache if we were scanning root directory
+    if is_root
+        && let Some(root_path) = &settings.root_path
+    {
+        let cached_repos = load_repo_cache().unwrap_or_default();
+        let mut existing_paths = HashSet::new();
+
+        // Add all current repo paths (including missing ones) to existing_paths
+        for repo in app.repos() {
+            if let Some(relative_path) = get_relative_path(repo.path(), root_path) {
+                existing_paths.insert(relative_path);
+            }
+        }
+
+        let updated_cache = build_updated_cache(app.repos(), cached_repos, &existing_paths, root_path);
+        save_repo_cache(root_path, &updated_cache)?;
+    }
 
     // If a repository was selected, change to that directory
     if let Some(repo_path) = app.selected_repo {
