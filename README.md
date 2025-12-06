@@ -48,6 +48,10 @@ Git-Repos is a command-line tool with a Text User Interface (TUI) that helps you
 - 🎨 **Color-coded display** - Visual indicators for repository states
 - ⌨️ **Keyboard navigation** - Vim-style (j/k) and arrow key navigation
 - 🚀 **Quick navigation** - Press Enter to change directory to selected repository
+- 💾 **Persistent cache** - Saves repository list for cross-machine sharing
+- 🗑️ **Repository management** - Delete repositories with 'd' key
+- 📥 **Clone missing repos** - Clone repositories marked as missing with 'c' key
+- 🔧 **Configuration** - Set root path and auto-update preferences
 - ⚡ **Fast and efficient** - Written in Rust for optimal performance
 
 ## Installation
@@ -106,6 +110,39 @@ git-repos --update
 
 When auto-fetch is enabled (default), the tool runs `git fetch --all --prune` for each repository that has a remote configured. A spinner animation in the status bar shows the progress. With `--update`, it also performs `git merge --ff-only` to update local branches when possible.
 
+### Configuration
+
+Set the root path to scan by default:
+
+```powershell
+git-repos set root D:\projects
+```
+
+Enable auto-update by default (fast-forward merge after fetch):
+
+```powershell
+git-repos set update true
+```
+
+The configuration is stored in:
+
+- Windows: `%APPDATA%\git-repos\config.toml`
+- Linux/macOS: `~/.config/git-repos/config.toml`
+
+### Repository cache
+
+The tool maintains a cache of discovered repositories in `repos.yaml` (same directory as config). This cache:
+
+- Saves the list of all repositories with their remote URLs
+- Persists across sessions for cross-machine sharing
+- Tracks deleted repositories as "missing" (shown in gray)
+- Merges with newly discovered repositories when scanning
+
+Missing repositories can be:
+
+- Cloned back using the 'c' key
+- Permanently removed from cache using the 'd' key
+
 ### Shell integration (recommended)
 
 Since a program cannot change the shell's working directory, you need to use a wrapper function to enable the "change directory on Enter" feature.
@@ -149,6 +186,8 @@ gr D:\projects  # Scan specific directory
 - **[** / **]** - Switch between view modes (All, Needs Attention, Behind, Modified)
 - **/** - Enter search mode to filter repositories by name
 - **Esc** - Exit search mode and clear search filter
+- **d** - Delete selected repository (marks as missing) or remove from cache if already missing
+- **c** - Clone selected missing repository (auto-detects GitHub for `gh` vs `git clone`)
 - **Enter** - Change directory to selected repository (exits the app)
 - **q** or **Ctrl-C** - Quit the application
 
@@ -171,9 +210,10 @@ The current mode is highlighted at the bottom right of the table.
 │   kdab/training-material│ develop │ up-to-date    │ clean      │ 1 week ago by Jane Smith             │
 │   narnaud/git-repos     │ main    │ local-only    │ 1S 2M      │ 5 minutes ago by Nicolas Arnaud      │
 │   oss/ratatui           │ main    │ ⟳ loading...  │ clean      │ ⟳ loading...                         │
+│   user/deleted-repo     │ -       │ -             │ missing    │ -                                    │
 ├─────────────────────────┴─────────┴───────────────┴────────────┴──All─[Needs Attention]─Behind─Modified┤
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-Found 4 repositories | ⠋ Fetching 2 repositories... | Mode: [/] | Search: / | Quit: q or Ctrl-C
+Found 5 repositories (1 missing) | ⠋ Fetching 2 repositories... | Mode: [/] | Search: / | Quit: q or Ctrl-C
 ```
 
 #### Color indicators
@@ -191,6 +231,34 @@ Found 4 repositories | ⠋ Fetching 2 repositories... | Mode: [/] | Search: / | 
 - 🟢 Green - `clean`
 - 🟡 Yellow - `XM` (modified), `XS` (staged), `XS YM` (both)
 - ⚫ DarkGray - `⟳ loading...` or `unknown`
+
+**Missing Repositories:**
+
+- ⚫ DarkGray - Repository deleted or not present on this machine
+- ⚪ White - Missing repository when selected (for better visibility)
+
+### Repository lifecycle
+
+**Deleting repositories:**
+
+1. Select a repository and press 'd'
+2. Confirm the deletion (default: No)
+3. The repository is deleted from disk and marked as "missing" in the cache
+4. Missing repositories appear in gray at the bottom of the list
+
+**Cloning missing repositories:**
+
+1. Select a missing repository (shown in gray)
+2. Press 'c' to clone it back
+3. The tool automatically detects GitHub repos and uses `gh repo clone` if available
+4. Progress is shown with an animated spinner
+5. Once cloned, the repository appears normally in the list
+
+**Removing from cache:**
+
+1. Select a missing repository
+2. Press 'd' again to permanently remove it from the cache
+3. It will no longer appear in the list
 
 ## Contributing
 
