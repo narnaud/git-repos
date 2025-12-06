@@ -71,6 +71,46 @@ pub struct App {
 }
 
 impl App {
+    /// Sort repositories: existing first (alphabetically), then missing (alphabetically)
+    fn sort_repos(repos: &mut [GitRepo]) {
+        repos.sort_by(|a, b| {
+            match (a.is_missing(), b.is_missing()) {
+                (false, true) => std::cmp::Ordering::Less,
+                (true, false) => std::cmp::Ordering::Greater,
+                _ => {
+                    let a_name = a.display_short().to_lowercase();
+                    let b_name = b.display_short().to_lowercase();
+                    a_name.cmp(&b_name)
+                }
+            }
+        });
+    }
+
+    /// Find repository index by path after sorting
+    fn find_repo_index(repos: &[GitRepo], path: &std::path::Path) -> Option<usize> {
+        repos.iter()
+            .position(|r| r.path() == path)
+    }
+
+    /// Spawn task to load git data for a repository
+    fn spawn_git_data_load(tx: tokio::sync::mpsc::UnboundedSender<GitDataUpdate>, idx: usize, path: std::path::PathBuf) {
+        tokio::spawn(async move {
+            let remote_status = tokio::task::spawn_blocking({
+                let path = path.clone();
+                move || GitRepo::read_remote_status(&path)
+            })
+            .await
+            .unwrap_or_else(|_| "error".to_string());
+
+            let status = tokio::task::spawn_blocking(move || GitRepo::read_status(&path))
+                .await
+                .unwrap_or_else(|_| "error".to_string());
+
+            let _ = tx.send(GitDataUpdate::RemoteStatus(idx, remote_status));
+            let _ = tx.send(GitDataUpdate::Status(idx, status));
+        });
+    }
+
     /// Create a new App instance
     pub fn new(repos: Vec<GitRepo>, scan_path: &Path, fetch: bool, update: bool) -> Self {
         Self::new_with_root(repos, scan_path, fetch, update, None)
@@ -84,18 +124,7 @@ impl App {
         update: bool,
         root_path: Option<std::path::PathBuf>,
     ) -> Self {
-        // Sort repositories: existing first (by name), then missing (by name)
-        repos.sort_by(|a, b| {
-            match (a.is_missing(), b.is_missing()) {
-                (false, true) => std::cmp::Ordering::Less,
-                (true, false) => std::cmp::Ordering::Greater,
-                _ => {
-                    let a_name = a.display_short().to_lowercase();
-                    let b_name = b.display_short().to_lowercase();
-                    a_name.cmp(&b_name)
-                }
-            }
-        });
+        Self::sort_repos(&mut repos);
 
         let mut table_state = TableState::default();
         if !repos.is_empty() {
@@ -202,31 +231,46 @@ impl App {
         match event {
             TerminalEvent::Key(code, modifiers) => {
                 if self.search_mode {
-                    match code {
-                        KeyCode::Esc => {
-                            self.search_mode = false;
-                            self.search_query.clear();
-                            self.table_state.select(Some(0));
-                            self.needs_redraw = true;
-                        }
-                        KeyCode::Enter => {
-                            self.search_mode = false;
-                            self.needs_redraw = true;
-                        }
-                        KeyCode::Backspace => {
-                            self.search_query.pop();
-                            self.table_state.select(Some(0));
-                            self.needs_redraw = true;
-                        }
-                        KeyCode::Char(c) => {
-                            self.search_query.push(c);
-                            self.table_state.select(Some(0));
-                            self.needs_redraw = true;
-                        }
-                        _ => {}
-                    }
+                    self.handle_search_key(code);
                 } else {
-                    match code {
+                    self.handle_normal_key(code, modifiers);
+                }
+            }
+            TerminalEvent::GitUpdate(update) => self.handle_git_update(update),
+        }
+        Ok(())
+    }
+
+    /// Handle key press in search mode
+    fn handle_search_key(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Esc => {
+                self.search_mode = false;
+                self.search_query.clear();
+                self.table_state.select(Some(0));
+                self.needs_redraw = true;
+            }
+            KeyCode::Enter => {
+                self.search_mode = false;
+                self.needs_redraw = true;
+            }
+            KeyCode::Backspace => {
+                self.search_query.pop();
+                self.table_state.select(Some(0));
+                self.needs_redraw = true;
+            }
+            KeyCode::Char(c) => {
+                self.search_query.push(c);
+                self.table_state.select(Some(0));
+                self.needs_redraw = true;
+            }
+            _ => {}
+        }
+    }
+
+    /// Handle key press in normal mode
+    fn handle_normal_key(&mut self, code: KeyCode, modifiers: KeyModifiers) {
+        match code {
                         KeyCode::Char('q') | KeyCode::Char('Q') => {
                             self.should_quit = true;
                         }
@@ -268,11 +312,13 @@ impl App {
                         KeyCode::Char('c') | KeyCode::Char('C') => {
                             self.handle_clone_repo();
                         }
-                        _ => {}
-                    }
-                }
-            }
-            TerminalEvent::GitUpdate(update) => match update {
+            _ => {}
+        }
+    }
+
+    /// Handle git data updates
+    fn handle_git_update(&mut self, update: GitDataUpdate) {
+        match update {
                 GitDataUpdate::RemoteStatus(idx, status) => {
                     if let Some(repo) = self.repos.get_mut(idx) {
                         repo.set_remote_status(status);
@@ -311,52 +357,12 @@ impl App {
 
                         // Only refresh if the clone was successful (directory exists)
                         if path.exists() {
-                            let new_repo = GitRepo::new(path.clone());
-                            self.repos[idx] = new_repo;
+                            self.repos[idx] = GitRepo::new(path.clone());
+                            Self::sort_repos(&mut self.repos);
 
-                            // Sort repositories: existing first (by name), then missing (by name)
-                            self.repos.sort_by(|a, b| {
-                                match (a.is_missing(), b.is_missing()) {
-                                    (false, true) => std::cmp::Ordering::Less,
-                                    (true, false) => std::cmp::Ordering::Greater,
-                                    _ => {
-                                        let a_name = a.display_short().to_lowercase();
-                                        let b_name = b.display_short().to_lowercase();
-                                        a_name.cmp(&b_name)
-                                    }
-                                }
-                            });
-
-                            // Find the new index of the cloned repo after sorting
-                            let new_idx = self.repos.iter()
-                                .enumerate()
-                                .find(|(_, r)| r.path() == path)
-                                .map(|(idx, _)| idx);
-
-                            if let Some(new_idx) = new_idx {
+                            if let Some(new_idx) = Self::find_repo_index(&self.repos, &path) {
                                 self.table_state.select(Some(new_idx));
-
-                                // Spawn async task to load git data with the NEW index
-                                let tx = self.event_handler.git_tx();
-                                let path_clone = path.clone();
-                                tokio::spawn(async move {
-                                    let remote_status = tokio::task::spawn_blocking({
-                                        let path = path_clone.clone();
-                                        move || GitRepo::read_remote_status(&path)
-                                    })
-                                    .await
-                                    .unwrap_or_else(|_| "error".to_string());
-
-                                    let status = tokio::task::spawn_blocking({
-                                        let path = path_clone.clone();
-                                        move || GitRepo::read_status(&path)
-                                    })
-                                    .await
-                                    .unwrap_or_else(|_| "error".to_string());
-
-                                    let _ = tx.send(GitDataUpdate::RemoteStatus(new_idx, remote_status));
-                                    let _ = tx.send(GitDataUpdate::Status(new_idx, status));
-                                });
+                                Self::spawn_git_data_load(self.event_handler.git_tx(), new_idx, path);
                             }
                         }
                     }
@@ -372,40 +378,19 @@ impl App {
                 GitDataUpdate::DeleteComplete(idx) => {
                     self.deleting_repos.retain(|&i| i != idx);
 
-                    // Mark the repository as missing
                     if let Some(repo) = self.repos.get_mut(idx) {
                         let repo_path = repo.path().to_path_buf();
                         repo.set_missing();
+                        Self::sort_repos(&mut self.repos);
 
-                        // Sort repositories: existing first (by name), then missing (by name)
-                        self.repos.sort_by(|a, b| {
-                            match (a.is_missing(), b.is_missing()) {
-                                (false, true) => std::cmp::Ordering::Less,
-                                (true, false) => std::cmp::Ordering::Greater,
-                                _ => {
-                                    let a_name = a.display_short().to_lowercase();
-                                    let b_name = b.display_short().to_lowercase();
-                                    a_name.cmp(&b_name)
-                                }
-                            }
-                        });
-
-                        // Find the new index of the selected repo after sorting
-                        let new_idx = self.repos.iter()
-                            .enumerate()
-                            .find(|(_, r)| r.path() == repo_path)
-                            .map(|(idx, _)| idx);
-
-                        if let Some(idx) = new_idx {
-                            self.table_state.select(Some(idx));
+                        if let Some(new_idx) = Self::find_repo_index(&self.repos, &repo_path) {
+                            self.table_state.select(Some(new_idx));
                         }
                     }
 
                     self.needs_redraw = true;
                 }
-            },
         }
-        Ok(())
     }
 
     /// Get filtered list of repository indices based on current filter mode
@@ -413,44 +398,46 @@ impl App {
         self.repos
             .iter()
             .enumerate()
-            .filter(|(_, repo)| {
-                // Apply search filter
-                if !self.search_query.is_empty() {
-                    let query_lower = self.search_query.to_lowercase();
-                    let name_match = repo.name()
-                        .map(|n| n.to_lowercase().contains(&query_lower))
-                        .unwrap_or(false);
-                    let parent_match = repo.parent_name()
-                        .map(|p| p.to_lowercase().contains(&query_lower))
-                        .unwrap_or(false);
-
-                    if !name_match && !parent_match {
-                        return false;
-                    }
-                }
-
-                // Apply filter mode
-                match self.filter_mode {
-                    FilterMode::All => true,
-                    FilterMode::NeedsAttention => {
-                        // Show repos that are behind, modified, or have no tracking
-                        let remote = repo.remote_status();
-                        let status = repo.status();
-                        (remote.contains('↓') || remote == "no-tracking")
-                            || (status != "clean" && status != "loading...")
-                    }
-                    FilterMode::Modified => {
-                        let status = repo.status();
-                        status != "clean" && status != "loading..."
-                    }
-                    FilterMode::Behind => {
-                        let remote = repo.remote_status();
-                        remote.contains('↓')
-                    }
-                }
-            })
+            .filter(|(_, repo)| self.matches_search(repo) && self.matches_filter(repo))
             .map(|(idx, _)| idx)
             .collect()
+    }
+
+    /// Check if repository matches search query
+    fn matches_search(&self, repo: &GitRepo) -> bool {
+        if self.search_query.is_empty() {
+            return true;
+        }
+
+        let query_lower = self.search_query.to_lowercase();
+        let name_match = repo.name()
+            .map(|n| n.to_lowercase().contains(&query_lower))
+            .unwrap_or(false);
+        let parent_match = repo.parent_name()
+            .map(|p| p.to_lowercase().contains(&query_lower))
+            .unwrap_or(false);
+
+        name_match || parent_match
+    }
+
+    /// Check if repository matches filter mode
+    fn matches_filter(&self, repo: &GitRepo) -> bool {
+        match self.filter_mode {
+            FilterMode::All => true,
+            FilterMode::NeedsAttention => {
+                let remote = repo.remote_status();
+                let status = repo.status();
+                (remote.contains('↓') || remote == "no-tracking")
+                    || (status != "clean" && status != "loading...")
+            }
+            FilterMode::Modified => {
+                let status = repo.status();
+                status != "clean" && status != "loading..."
+            }
+            FilterMode::Behind => {
+                repo.remote_status().contains('↓')
+            }
+        }
     }
 
     /// Check if search mode is active
