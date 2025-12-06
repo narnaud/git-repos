@@ -310,16 +310,17 @@ impl App {
 
                             // Spawn async task to load git data
                             let tx = self.event_handler.git_tx();
+                            let path_clone = path.clone();
                             tokio::spawn(async move {
                                 let remote_status = tokio::task::spawn_blocking({
-                                    let path = path.clone();
+                                    let path = path_clone.clone();
                                     move || GitRepo::read_remote_status(&path)
                                 })
                                 .await
                                 .unwrap_or_else(|_| "error".to_string());
 
                                 let status = tokio::task::spawn_blocking({
-                                    let path = path.clone();
+                                    let path = path_clone.clone();
                                     move || GitRepo::read_status(&path)
                                 })
                                 .await
@@ -330,6 +331,29 @@ impl App {
                             });
 
                             self.repos[idx] = new_repo;
+
+                            // Sort repositories: existing first (by name), then missing (by name)
+                            self.repos.sort_by(|a, b| {
+                                match (a.is_missing(), b.is_missing()) {
+                                    (false, true) => std::cmp::Ordering::Less,
+                                    (true, false) => std::cmp::Ordering::Greater,
+                                    _ => {
+                                        let a_name = a.display_short().to_lowercase();
+                                        let b_name = b.display_short().to_lowercase();
+                                        a_name.cmp(&b_name)
+                                    }
+                                }
+                            });
+
+                            // Find the new index of the cloned repo after sorting
+                            let new_idx = self.repos.iter()
+                                .enumerate()
+                                .find(|(_, r)| r.path() == path)
+                                .map(|(idx, _)| idx);
+
+                            if let Some(idx) = new_idx {
+                                self.table_state.select(Some(idx));
+                            }
                         }
                     }
 
