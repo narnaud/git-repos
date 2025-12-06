@@ -1,0 +1,63 @@
+use color_eyre::Result;
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Settings {
+    /// The default root directory to scan for git repositories
+    pub root_path: Option<PathBuf>,
+}
+
+impl Settings {
+    /// Load settings from the config file
+    pub fn load() -> Result<Self> {
+        let config_path = Self::config_file_path()?;
+
+        if !config_path.exists() {
+            return Ok(Self::default());
+        }
+
+        let contents = fs::read_to_string(&config_path)?;
+        let settings: Settings = toml::from_str(&contents)?;
+
+        Ok(settings)
+    }
+
+    /// Save settings to the config file
+    pub fn save(&self) -> Result<()> {
+        let config_path = Self::config_file_path()?;
+
+        // Create parent directory if it doesn't exist
+        if let Some(parent) = config_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let contents = toml::to_string_pretty(self)?;
+        fs::write(&config_path, contents)?;
+
+        Ok(())
+    }
+
+    /// Get the path to the config file
+    fn config_file_path() -> Result<PathBuf> {
+        let config_dir = dirs::config_dir()
+            .ok_or_else(|| color_eyre::eyre::eyre!("Could not determine config directory"))?;
+
+        Ok(config_dir.join("git-repos").join("config.toml"))
+    }
+
+    /// Set the root path and save
+    pub fn set_root_path(&mut self, path: PathBuf) -> Result<()> {
+        // Remove the \\?\ prefix that Windows canonicalize adds
+        let path_str = path.to_string_lossy();
+        let cleaned_path = if let Some(stripped) = path_str.strip_prefix(r"\\?\") {
+            PathBuf::from(stripped)
+        } else {
+            path
+        };
+        
+        self.root_path = Some(cleaned_path);
+        self.save()
+    }
+}
