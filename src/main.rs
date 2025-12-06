@@ -9,7 +9,7 @@ mod git_repo;
 mod ui;
 
 use app::App;
-use config::Settings;
+use config::{save_repo_cache, CachedRepo, Settings};
 use git_repo::find_git_repos;
 
 /// CLI tool for managing git repositories
@@ -115,6 +115,37 @@ async fn main() -> Result<()> {
     let scan_path = determine_scan_path(args.path, &settings)?;
     let repos = find_git_repos(&scan_path);
     let update_enabled = args.update || settings.update_by_default;
+
+    // If scanning the root directory, save the repository list to cache
+    if let Some(root_path) = &settings.root_path
+        && &scan_path == root_path
+    {
+        let cached_repos: Vec<CachedRepo> = repos
+            .iter()
+            .filter_map(|repo| {
+                // Clean the repo path by removing \\?\ prefix
+                let repo_path_str = repo.path().to_str()?;
+                let cleaned_repo_path = if let Some(stripped) = repo_path_str.strip_prefix(r"\\?\") {
+                    PathBuf::from(stripped)
+                } else {
+                    repo.path().to_path_buf()
+                };
+
+                // Get relative path from root
+                let relative_path = cleaned_repo_path
+                    .strip_prefix(root_path)
+                    .ok()?
+                    .to_path_buf();
+
+                Some(CachedRepo {
+                    path: relative_path,
+                    remote: repo.get_remote_url(),
+                })
+            })
+            .collect();
+
+        save_repo_cache(root_path, &cached_repos)?;
+    }
 
     // Run the TUI
     let mut app = App::new(repos, &scan_path, !args.no_fetch, update_enabled);

@@ -1,7 +1,7 @@
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Settings {
@@ -11,6 +11,14 @@ pub struct Settings {
     /// Whether to enable fast-forward merge updates by default
     #[serde(default)]
     pub update_by_default: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CachedRepo {
+    /// Relative path from the root directory
+    pub path: PathBuf,
+    /// Remote URL (origin)
+    pub remote: Option<String>,
 }
 
 impl Settings {
@@ -70,4 +78,22 @@ impl Settings {
         self.update_by_default = enabled;
         self.save()
     }
+}
+
+/// Save repository cache to YAML file
+pub fn save_repo_cache(_root: &Path, repos: &[CachedRepo]) -> Result<()> {
+    let config_dir = dirs::config_dir()
+        .ok_or_else(|| color_eyre::eyre::eyre!("Could not determine config directory"))?;
+
+    let cache_path = config_dir.join("git-repos").join("repos.yaml");
+
+    // Create parent directory if it doesn't exist
+    if let Some(parent) = cache_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let yaml = serde_yaml::to_string(repos)?;
+    fs::write(&cache_path, yaml)?;
+
+    Ok(())
 }

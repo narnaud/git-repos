@@ -81,6 +81,21 @@ impl GitRepo {
         self.status.as_deref().unwrap_or("loading...")
     }
 
+    /// Get the remote URL (origin)
+    pub fn get_remote_url(&self) -> Option<String> {
+        let output = Command::new("git")
+            .args(["remote", "get-url", "origin"])
+            .current_dir(&self.path)
+            .output()
+            .ok()?;
+
+        if output.status.success() {
+            Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        } else {
+            None
+        }
+    }
+
     /// Read the current branch name from .git/HEAD
     fn read_branch(path: &Path) -> String {
         // Try to read .git/HEAD to get the current branch
