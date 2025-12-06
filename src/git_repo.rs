@@ -47,6 +47,11 @@ impl GitRepo {
         self.missing
     }
 
+    /// Mark this repository as missing (deleted)
+    pub fn set_missing(&mut self) {
+        self.missing = true;
+    }
+
     /// Update the remote status
     pub fn set_remote_status(&mut self, remote_status: String) {
         self.remote_status = Some(remote_status);

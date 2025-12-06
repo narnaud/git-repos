@@ -77,12 +77,25 @@ impl App {
 
     /// Create a new App instance with optional root path
     pub fn new_with_root(
-        repos: Vec<GitRepo>,
+        mut repos: Vec<GitRepo>,
         scan_path: &Path,
         fetch: bool,
         update: bool,
         root_path: Option<std::path::PathBuf>,
     ) -> Self {
+        // Sort repositories: existing first (by name), then missing (by name)
+        repos.sort_by(|a, b| {
+            match (a.is_missing(), b.is_missing()) {
+                (false, true) => std::cmp::Ordering::Less,
+                (true, false) => std::cmp::Ordering::Greater,
+                _ => {
+                    let a_name = a.display_short().to_lowercase();
+                    let b_name = b.display_short().to_lowercase();
+                    a_name.cmp(&b_name)
+                }
+            }
+        });
+
         let mut table_state = TableState::default();
         if !repos.is_empty() {
             table_state.select(Some(0));
@@ -427,14 +440,17 @@ impl App {
             return;
         };
 
-        if repo.is_missing() {
+        let is_missing = repo.is_missing();
+        let repo_path = repo.path().to_path_buf();
+
+        if is_missing {
             // Missing repo: remove from cache
             if let Some(root_path) = &self.root_path {
-                let repo_path_str = repo.path().to_str().unwrap_or("");
+                let repo_path_str = repo_path.to_str().unwrap_or("");
                 let cleaned_path = if let Some(stripped) = repo_path_str.strip_prefix(r"\\?\") {
                     std::path::PathBuf::from(stripped)
                 } else {
-                    repo.path().to_path_buf()
+                    repo_path.clone()
                 };
 
                 if let Ok(relative_path) = cleaned_path.strip_prefix(root_path)
@@ -459,21 +475,34 @@ impl App {
                 }
             }
         } else {
-            // Normal repo: delete directory
-            if std::fs::remove_dir_all(repo.path()).is_ok() {
-                // Keep in cache if we're in root mode, just remove from current list
-                self.repos.remove(selected);
+            // Normal repo: delete directory and mark as missing
+            if std::fs::remove_dir_all(&repo_path).is_ok() {
+                // Mark the repository as missing instead of removing it
+                if let Some(repo) = self.repos.get_mut(selected) {
+                    repo.set_missing();
+                }
 
-                // Adjust selection
-                if !self.repos.is_empty() {
-                    let new_selected = if selected >= self.repos.len() {
-                        self.repos.len() - 1
-                    } else {
-                        selected
-                    };
-                    self.table_state.select(Some(new_selected));
-                } else {
-                    self.table_state.select(None);
+                // Sort repositories: existing first (by name), then missing (by name)
+                self.repos.sort_by(|a, b| {
+                    match (a.is_missing(), b.is_missing()) {
+                        (false, true) => std::cmp::Ordering::Less,
+                        (true, false) => std::cmp::Ordering::Greater,
+                        _ => {
+                            let a_name = a.display_short().to_lowercase();
+                            let b_name = b.display_short().to_lowercase();
+                            a_name.cmp(&b_name)
+                        }
+                    }
+                });
+
+                // Find the new index of the selected repo after sorting
+                let new_idx = self.repos.iter()
+                    .enumerate()
+                    .find(|(_, r)| r.path() == repo_path)
+                    .map(|(idx, _)| idx);
+
+                if let Some(idx) = new_idx {
+                    self.table_state.select(Some(idx));
                 }
 
                 self.needs_redraw = true;
