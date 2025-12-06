@@ -175,14 +175,14 @@ impl App {
                     Span::styled(repo_count, Style::default().fg(Color::Cyan)),
                     Span::raw(" | "),
                     Span::styled(fetch_text, Style::default().fg(Color::Yellow)),
-                    Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                    Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
                 ])
             } else {
                 Line::from(vec![
                     Span::styled(search_display, Style::default().fg(Color::Yellow)),
                     Span::raw(" | "),
                     Span::styled(repo_count, Style::default().fg(Color::Cyan)),
-                    Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                    Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
                 ])
             }
         } else if !self.fetching_repos.is_empty() {
@@ -199,12 +199,12 @@ impl App {
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
                 Span::raw(" | "),
                 Span::styled(fetch_text, Style::default().fg(Color::Yellow)),
-                Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
             ])
         } else {
             Line::from(vec![
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
-                Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
             ])
         };
 
