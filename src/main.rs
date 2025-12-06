@@ -113,7 +113,7 @@ async fn main() -> Result<()> {
 
     // Determine scan path and configuration
     let scan_path = determine_scan_path(args.path, &settings)?;
-    let repos = find_git_repos(&scan_path)?;
+    let repos = find_git_repos(&scan_path);
     let update_enabled = args.update || settings.update_by_default;
 
     // Run the TUI

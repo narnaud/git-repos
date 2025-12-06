@@ -7,7 +7,7 @@ use std::path::PathBuf;
 pub struct Settings {
     /// The default root directory to scan for git repositories
     pub root_path: Option<PathBuf>,
-    
+
     /// Whether to enable fast-forward merge updates by default
     #[serde(default)]
     pub update_by_default: bool,
@@ -60,11 +60,11 @@ impl Settings {
         } else {
             path
         };
-        
+
         self.root_path = Some(cleaned_path);
         self.save()
     }
-    
+
     /// Set whether to update by default and save
     pub fn set_update(&mut self, enabled: bool) -> Result<()> {
         self.update_by_default = enabled;

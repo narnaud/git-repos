@@ -236,45 +236,31 @@ fn is_git_repo(path: &Path) -> bool {
 }
 
 /// Scan directory recursively and find all git repositories
-pub fn find_git_repos(root: &Path) -> Result<Vec<GitRepo>> {
-    let mut repos = Vec::new();
+pub fn find_git_repos(root: &Path) -> Vec<GitRepo> {
+    WalkDir::new(root)
+        .into_iter()
+        .filter_entry(|e| {
+            let filename = e.file_name();
 
-    for entry in WalkDir::new(root).into_iter().filter_entry(|e| {
-        // Always skip .git directories themselves
-        if e.file_name() == ".git" {
-            return false;
-        }
-        // Skip hidden directories (starting with .)
-        if e.file_name()
-            .to_str()
-            .map(|s| s.starts_with('.'))
-            .unwrap_or(false)
-        {
-            return false;
-        }
-        // Skip if parent directory is a git repo
-        if let Some(parent) = e.path().parent()
-            && parent != root
-            && is_git_repo(parent)
-        {
-            return false;
-        }
-        true
-    }) {
-        // Skip entries with errors (e.g., permission denied)
-        let entry = match entry {
-            Ok(e) => e,
-            Err(_) => continue,
-        };
+            // Skip .git directories and other hidden directories
+            if filename.to_str().is_some_and(|s| s.starts_with('.')) {
+                return false;
+            }
 
-        let path = entry.path();
+            // Skip if parent is a git repo (don't descend into nested repos)
+            if let Some(parent) = e.path().parent()
+                && parent != root && is_git_repo(parent)
+            {
+                return false;
+            }
 
-        // Check if this directory is a git repository
-        if entry.file_type().is_dir() && is_git_repo(path) {
-            let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-            repos.push(GitRepo::new(canonical_path));
-        }
-    }
-
-    Ok(repos)
+            true
+        })
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.file_type().is_dir() && is_git_repo(entry.path()))
+        .map(|entry| {
+            let path = entry.path().canonicalize().unwrap_or_else(|_| entry.path().to_path_buf());
+            GitRepo::new(path)
+        })
+        .collect()
 }
