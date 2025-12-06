@@ -21,15 +21,14 @@ struct Args {
     command: Option<Command>,
 
     /// Path to scan for git repositories (defaults to current directory or configured root)
-    #[arg(global = true)]
     path: Option<PathBuf>,
 
     /// Skip automatic fetching of repositories with remotes
-    #[arg(long, global = true)]
+    #[arg(long)]
     no_fetch: bool,
 
     /// Update local branches with fast-forward merge after fetch
-    #[arg(short, long, global = true)]
+    #[arg(short, long)]
     update: bool,
 }
 
@@ -48,6 +47,11 @@ enum SetCommand {
     Root {
         /// Path to use as the default root directory
         path: PathBuf,
+    },
+    /// Enable fast-forward updates by default
+    Update {
+        /// Enable or disable auto-update (true or false)
+        enabled: String,
     },
 }
 
@@ -75,6 +79,14 @@ async fn main() -> Result<()> {
                     println!("Root path set to: {}", display_path);
                     return Ok(());
                 }
+                SetCommand::Update { enabled } => {
+                    let enabled_bool = enabled.to_lowercase().parse::<bool>()
+                        .map_err(|_| color_eyre::eyre::eyre!("Invalid value '{}'. Use 'true' or 'false'", enabled))?;
+                    let mut settings = Settings::load()?;
+                    settings.set_update(enabled_bool)?;
+                    println!("Auto-update set to: {}", enabled_bool);
+                    return Ok(());
+                }
             },
         }
     }
@@ -93,7 +105,10 @@ async fn main() -> Result<()> {
 
     let repos = find_git_repos(&scan_path)?;
 
-    let mut app = App::new(repos, &scan_path, !args.no_fetch, args.update);
+    // Determine if update should be enabled: CLI flag overrides setting
+    let update_enabled = args.update || settings.update_by_default;
+
+    let mut app = App::new(repos, &scan_path, !args.no_fetch, update_enabled);
     app.run().await?;
 
     // If a repository was selected, change to that directory
