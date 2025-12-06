@@ -97,3 +97,20 @@ pub fn save_repo_cache(_root: &Path, repos: &[CachedRepo]) -> Result<()> {
 
     Ok(())
 }
+
+/// Load repository cache from YAML file
+pub fn load_repo_cache() -> Result<Vec<CachedRepo>> {
+    let config_dir = dirs::config_dir()
+        .ok_or_else(|| color_eyre::eyre::eyre!("Could not determine config directory"))?;
+
+    let cache_path = config_dir.join("git-repos").join("repos.yaml");
+
+    if !cache_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let contents = fs::read_to_string(&cache_path)?;
+    let repos: Vec<CachedRepo> = serde_yaml::from_str(&contents)?;
+
+    Ok(repos)
+}

@@ -11,6 +11,7 @@ pub struct GitRepo {
     branch: String,
     remote_status: Option<String>,
     status: Option<String>,
+    missing: bool,
 }
 
 impl GitRepo {
@@ -23,7 +24,24 @@ impl GitRepo {
             branch,
             remote_status: None,
             status: None,
+            missing: false,
         }
+    }
+
+    /// Create a new missing GitRepo (exists in cache but not on disk)
+    pub fn new_missing(path: PathBuf) -> Self {
+        Self {
+            path,
+            branch: String::new(),
+            remote_status: None,
+            status: None,
+            missing: true,
+        }
+    }
+
+    /// Check if this repo is missing from disk
+    pub fn is_missing(&self) -> bool {
+        self.missing
     }
 
     /// Update the remote status

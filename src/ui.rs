@@ -34,6 +34,16 @@ impl App {
             .enumerate()
             .filter(|(idx, _)| filtered_indices.contains(idx))
             .map(|(_, repo)| {
+                // If repo is missing, render everything in gray
+                if repo.is_missing() {
+                    return Row::new(vec![
+                        Cell::from(repo.display_short()).fg(Color::DarkGray),
+                        Cell::from("").fg(Color::DarkGray),
+                        Cell::from("missing").fg(Color::DarkGray),
+                        Cell::from("").fg(Color::DarkGray),
+                    ]);
+                }
+
                 let remote_status = repo.remote_status();
                 let (remote_text, remote_color) = match remote_status {
                     "loading..." => (format!("⟳ {}", remote_status), Color::DarkGray),

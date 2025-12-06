@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use color_eyre::Result;
-use std::path::PathBuf;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 
 mod app;
 mod config;
@@ -9,8 +10,8 @@ mod git_repo;
 mod ui;
 
 use app::App;
-use config::{save_repo_cache, CachedRepo, Settings};
-use git_repo::find_git_repos;
+use config::{load_repo_cache, save_repo_cache, CachedRepo, Settings};
+use git_repo::{find_git_repos, GitRepo};
 
 /// CLI tool for managing git repositories
 #[derive(Parser, Debug)]
@@ -92,6 +93,85 @@ fn determine_scan_path(args_path: Option<PathBuf>, settings: &Settings) -> Resul
     }
 }
 
+/// Clean a path by removing Windows \\?\ prefix
+fn clean_path(path: &Path) -> PathBuf {
+    if let Some(path_str) = path.to_str()
+        && let Some(stripped) = path_str.strip_prefix(r"\\?\")
+    {
+        return PathBuf::from(stripped);
+    }
+    path.to_path_buf()
+}
+
+/// Get relative path from root, handling \\?\ prefix
+fn get_relative_path(repo_path: &Path, root_path: &Path) -> Option<PathBuf> {
+    let cleaned_path = clean_path(repo_path);
+    cleaned_path.strip_prefix(root_path).ok().map(|p| p.to_path_buf())
+}
+
+/// Build a set of existing repo relative paths
+fn build_existing_paths(repos: &[GitRepo], root_path: &Path) -> HashSet<PathBuf> {
+    repos
+        .iter()
+        .filter_map(|repo| get_relative_path(repo.path(), root_path))
+        .collect()
+}
+
+/// Add missing repos from cache to the repo list
+fn add_missing_repos(repos: &mut Vec<GitRepo>, cached_repos: &[CachedRepo], existing_paths: &HashSet<PathBuf>, root_path: &Path) {
+    for cached in cached_repos {
+        if !existing_paths.contains(&cached.path) {
+            let full_path = root_path.join(&cached.path);
+            repos.push(GitRepo::new_missing(full_path));
+        }
+    }
+}
+
+/// Build updated cache from current repos and missing cached repos
+fn build_updated_cache(repos: &[GitRepo], cached_repos: Vec<CachedRepo>, existing_paths: &HashSet<PathBuf>, root_path: &Path) -> Vec<CachedRepo> {
+    repos
+        .iter()
+        .filter_map(|repo| {
+            // Skip missing repos - they're already in the cache
+            if repo.is_missing() {
+                return None;
+            }
+
+            // Get relative path from root
+            let relative_path = get_relative_path(repo.path(), root_path)?;
+
+            Some(CachedRepo {
+                path: relative_path,
+                remote: repo.get_remote_url(),
+            })
+        })
+        .chain(
+            // Keep cached repos that are missing
+            cached_repos.into_iter().filter(|c| !existing_paths.contains(&c.path))
+        )
+        .collect()
+}
+
+/// Merge discovered repos with cached repos and update the cache
+fn merge_with_cache(repos: &mut Vec<GitRepo>, root_path: &Path) -> Result<()> {
+    let cached_repos = load_repo_cache().unwrap_or_default();
+    let mut existing_paths = build_existing_paths(repos, root_path);
+
+    // Add missing repos from cache
+    add_missing_repos(repos, &cached_repos, &existing_paths, root_path);
+
+    // Mark all paths as existing for cache update
+    for cached in &cached_repos {
+        existing_paths.insert(cached.path.clone());
+    }
+
+    // Build and save updated cache
+    let updated_cache = build_updated_cache(repos, cached_repos, &existing_paths, root_path);
+    save_repo_cache(root_path, &updated_cache)?;
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
@@ -113,38 +193,14 @@ async fn main() -> Result<()> {
 
     // Determine scan path and configuration
     let scan_path = determine_scan_path(args.path, &settings)?;
-    let repos = find_git_repos(&scan_path);
+    let mut repos = find_git_repos(&scan_path);
     let update_enabled = args.update || settings.update_by_default;
 
-    // If scanning the root directory, save the repository list to cache
+    // If scanning the root directory, merge with cache
     if let Some(root_path) = &settings.root_path
         && &scan_path == root_path
     {
-        let cached_repos: Vec<CachedRepo> = repos
-            .iter()
-            .filter_map(|repo| {
-                // Clean the repo path by removing \\?\ prefix
-                let repo_path_str = repo.path().to_str()?;
-                let cleaned_repo_path = if let Some(stripped) = repo_path_str.strip_prefix(r"\\?\") {
-                    PathBuf::from(stripped)
-                } else {
-                    repo.path().to_path_buf()
-                };
-
-                // Get relative path from root
-                let relative_path = cleaned_repo_path
-                    .strip_prefix(root_path)
-                    .ok()?
-                    .to_path_buf();
-
-                Some(CachedRepo {
-                    path: relative_path,
-                    remote: repo.get_remote_url(),
-                })
-            })
-            .collect();
-
-        save_repo_cache(root_path, &cached_repos)?;
+        merge_with_cache(&mut repos, root_path)?;
     }
 
     // Run the TUI
