@@ -61,6 +61,7 @@ pub struct App {
     event_handler: EventHandler,
     pub selected_repo: Option<String>,
     pub fetching_repos: Vec<usize>,
+    pub cloning_repos: Vec<usize>,
     pub fetch_animation_frame: usize,
     pub filter_mode: FilterMode,
     search_query: String,
@@ -116,6 +117,7 @@ impl App {
             event_handler,
             selected_repo: None,
             fetching_repos: Vec::new(),
+            cloning_repos: Vec::new(),
             fetch_animation_frame: 0,
             filter_mode: FilterMode::All,
             search_query: String::new(),
@@ -165,7 +167,7 @@ impl App {
                     }
                 }
                 _ = animation_interval.tick() => {
-                    if !self.fetching_repos.is_empty() {
+                    if !self.fetching_repos.is_empty() || !self.cloning_repos.is_empty() {
                         self.fetch_animation_frame = (self.fetch_animation_frame + 1) % 10;
                         self.needs_redraw = true;
                     }
@@ -272,6 +274,50 @@ impl App {
                 GitDataUpdate::FetchComplete(idx) => {
                     self.fetching_repos.retain(|&i| i != idx);
                     self.fetch_animation_frame = (self.fetch_animation_frame + 1) % 10;
+                    self.needs_redraw = true;
+                }
+                GitDataUpdate::CloneProgress(idx) => {
+                    if !self.cloning_repos.contains(&idx) {
+                        self.cloning_repos.push(idx);
+                        self.needs_redraw = true;
+                    }
+                }
+                GitDataUpdate::CloneComplete(idx) => {
+                    self.cloning_repos.retain(|&i| i != idx);
+
+                    // Refresh the repository by recreating it as a normal repo
+                    if let Some(repo) = self.repos.get(idx) {
+                        let path = repo.path().to_path_buf();
+
+                        // Only refresh if the clone was successful (directory exists)
+                        if path.exists() {
+                            let new_repo = GitRepo::new(path.clone());
+
+                            // Spawn async task to load git data
+                            let tx = self.event_handler.git_tx();
+                            tokio::spawn(async move {
+                                let remote_status = tokio::task::spawn_blocking({
+                                    let path = path.clone();
+                                    move || GitRepo::read_remote_status(&path)
+                                })
+                                .await
+                                .unwrap_or_else(|_| "error".to_string());
+
+                                let status = tokio::task::spawn_blocking({
+                                    let path = path.clone();
+                                    move || GitRepo::read_status(&path)
+                                })
+                                .await
+                                .unwrap_or_else(|_| "error".to_string());
+
+                                let _ = tx.send(GitDataUpdate::RemoteStatus(idx, remote_status));
+                                let _ = tx.send(GitDataUpdate::Status(idx, status));
+                            });
+
+                            self.repos[idx] = new_repo;
+                        }
+                    }
+
                     self.needs_redraw = true;
                 }
             },
@@ -450,28 +496,31 @@ impl App {
             return;
         }
 
-        // Clone the repository
-        if repo.clone_repository().is_ok() {
-            // Refresh the repository by recreating it as a normal repo
-            let path = repo.path().to_path_buf();
-            let mut new_repo = GitRepo::new(path);
+        // Mark as cloning
+        self.cloning_repos.push(selected);
+        self.needs_redraw = true;
 
-            // Load remote status and status asynchronously
-            let path_for_remote = new_repo.path().to_path_buf();
-            let remote_status = tokio::task::block_in_place(|| {
-                GitRepo::read_remote_status(&path_for_remote)
-            });
-            new_repo.set_remote_status(remote_status);
+        // Clone the repository in background
+        let repo_clone = repo.clone();
+        let tx = self.event_handler.git_tx();
+        let idx = selected;
 
-            let path_for_status = new_repo.path().to_path_buf();
-            let status = tokio::task::block_in_place(|| {
-                GitRepo::read_status(&path_for_status)
-            });
-            new_repo.set_status(status);
+        tokio::spawn(async move {
+            // Send clone progress
+            let _ = tx.send(GitDataUpdate::CloneProgress(idx));
 
-            // Replace the missing repo with the cloned one
-            self.repos[selected] = new_repo;
-            self.needs_redraw = true;
-        }
+            // Perform clone
+            let clone_result = tokio::task::spawn_blocking(move || {
+                repo_clone.clone_repository()
+            }).await;
+
+            // Send clone complete
+            let _ = tx.send(GitDataUpdate::CloneComplete(idx));
+
+            // If successful, the UI will be updated through CloneComplete handler
+            if clone_result.is_ok() {
+                // Repository will be refreshed when user selects it again or on next scan
+            }
+        });
     }
 }

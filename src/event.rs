@@ -10,6 +10,8 @@ pub enum GitDataUpdate {
     Status(usize, String),
     FetchProgress(usize),
     FetchComplete(usize),
+    CloneProgress(usize),
+    CloneComplete(usize),
 }
 
 /// Terminal event types
@@ -22,6 +24,7 @@ pub enum TerminalEvent {
 pub struct EventHandler {
     terminal_events: EventStream,
     git_rx: mpsc::UnboundedReceiver<GitDataUpdate>,
+    git_tx: mpsc::UnboundedSender<GitDataUpdate>,
 }
 
 impl EventHandler {
@@ -83,12 +86,18 @@ impl EventHandler {
                 }
             });
         }
-        drop(tx); // Close sender
+        let tx_clone = tx.clone();
 
         Self {
             terminal_events: EventStream::new(),
             git_rx,
+            git_tx: tx_clone,
         }
+    }
+
+    /// Get a clone of the git update sender
+    pub fn git_tx(&self) -> mpsc::UnboundedSender<GitDataUpdate> {
+        self.git_tx.clone()
     }
 
     /// Get next event (terminal or git update)

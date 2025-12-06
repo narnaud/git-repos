@@ -160,21 +160,38 @@ impl App {
             // Show search at the bottom left when a search filter is active
             let search_display = format!("Search: {} (press / to edit)", self.search_query());
 
-            if !self.fetching_repos.is_empty() {
+            if !self.fetching_repos.is_empty() || !self.cloning_repos.is_empty() {
                 let spinner_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
                 let spinner = spinner_chars[self.fetch_animation_frame % spinner_chars.len()];
-                let fetch_text = if self.fetching_repos.len() == 1 {
-                    format!("{} Fetching 1 repository...", spinner)
-                } else {
-                    format!("{} Fetching {} repositories...", spinner, self.fetching_repos.len())
-                };
+
+                let mut progress_parts = Vec::new();
+
+                if !self.fetching_repos.is_empty() {
+                    let fetch_text = if self.fetching_repos.len() == 1 {
+                        format!("{} Fetching 1 repo", spinner)
+                    } else {
+                        format!("{} Fetching {} repos", spinner, self.fetching_repos.len())
+                    };
+                    progress_parts.push(fetch_text);
+                }
+
+                if !self.cloning_repos.is_empty() {
+                    let clone_text = if self.cloning_repos.len() == 1 {
+                        format!("{} Cloning 1 repo", spinner)
+                    } else {
+                        format!("{} Cloning {} repos", spinner, self.cloning_repos.len())
+                    };
+                    progress_parts.push(clone_text);
+                }
+
+                let progress_text = progress_parts.join(", ");
 
                 Line::from(vec![
                     Span::styled(search_display, Style::default().fg(Color::Yellow)),
                     Span::raw(" | "),
                     Span::styled(repo_count, Style::default().fg(Color::Cyan)),
                     Span::raw(" | "),
-                    Span::styled(fetch_text, Style::default().fg(Color::Yellow)),
+                    Span::styled(progress_text, Style::default().fg(Color::Yellow)),
                     Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Clone: c | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
                 ])
             } else {
@@ -185,20 +202,37 @@ impl App {
                     Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Clone: c | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
                 ])
             }
-        } else if !self.fetching_repos.is_empty() {
-            // Show fetch progress with animation
+        } else if !self.fetching_repos.is_empty() || !self.cloning_repos.is_empty() {
+            // Show fetch/clone progress with animation
             let spinner_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
             let spinner = spinner_chars[self.fetch_animation_frame % spinner_chars.len()];
-            let fetch_text = if self.fetching_repos.len() == 1 {
-                format!("{} Fetching 1 repository...", spinner)
-            } else {
-                format!("{} Fetching {} repositories...", spinner, self.fetching_repos.len())
-            };
+
+            let mut progress_parts = Vec::new();
+
+            if !self.fetching_repos.is_empty() {
+                let fetch_text = if self.fetching_repos.len() == 1 {
+                    format!("{} Fetching 1 repo", spinner)
+                } else {
+                    format!("{} Fetching {} repos", spinner, self.fetching_repos.len())
+                };
+                progress_parts.push(fetch_text);
+            }
+
+            if !self.cloning_repos.is_empty() {
+                let clone_text = if self.cloning_repos.len() == 1 {
+                    format!("{} Cloning 1 repo", spinner)
+                } else {
+                    format!("{} Cloning {} repos", spinner, self.cloning_repos.len())
+                };
+                progress_parts.push(clone_text);
+            }
+
+            let progress_text = progress_parts.join(", ");
 
             Line::from(vec![
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
                 Span::raw(" | "),
-                Span::styled(fetch_text, Style::default().fg(Color::Yellow)),
+                Span::styled(progress_text, Style::default().fg(Color::Yellow)),
                 Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Clone: c | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
             ])
         } else {
