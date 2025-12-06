@@ -29,7 +29,7 @@ impl App {
 
         let filtered_indices = self.filtered_repos();
         let selected_idx = self.table_state.selected();
-        
+
         let rows: Vec<Row> = self
             .repos
             .iter()
@@ -40,7 +40,7 @@ impl App {
                 if repo.is_missing() {
                     let is_selected = selected_idx == Some(idx);
                     let color = if is_selected { Color::White } else { Color::DarkGray };
-                    
+
                     return Row::new(vec![
                         Cell::from(repo.display_short()).fg(color),
                         Cell::from("").fg(color),

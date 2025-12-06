@@ -370,13 +370,13 @@ impl App {
                         self.needs_redraw = true;
                     }
                 }
-                GitDataUpdate::DeleteComplete(idx) => {
+                GitDataUpdate::DeleteComplete(idx, remote_url) => {
                     self.deleting_repos.retain(|&i| i != idx);
 
-                    // Mark the repository as missing
+                    // Mark the repository as missing, preserving its remote URL
                     if let Some(repo) = self.repos.get_mut(idx) {
                         let repo_path = repo.path().to_path_buf();
-                        repo.set_missing();
+                        repo.set_missing(remote_url);
 
                         // Sort repositories: existing first (by name), then missing (by name)
                         self.repos.sort_by(|a, b| {
@@ -547,6 +547,9 @@ impl App {
             }
         } else {
             // Normal repo: delete directory asynchronously and mark as missing
+            // Get remote URL before deletion
+            let remote_url = repo.get_remote_url();
+
             self.deleting_repos.push(selected);
             self.needs_redraw = true;
 
@@ -562,8 +565,8 @@ impl App {
                     std::fs::remove_dir_all(&repo_path)
                 }).await;
 
-                // Send delete complete
-                let _ = tx.send(GitDataUpdate::DeleteComplete(idx));
+                // Send delete complete with remote URL
+                let _ = tx.send(GitDataUpdate::DeleteComplete(idx, remote_url));
 
                 drop(delete_result); // Ignore result
             });

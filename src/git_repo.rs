@@ -48,8 +48,9 @@ impl GitRepo {
     }
 
     /// Mark this repository as missing (deleted)
-    pub fn set_missing(&mut self) {
+    pub fn set_missing(&mut self, remote_url: Option<String>) {
         self.missing = true;
+        self.remote_url = remote_url;
     }
 
     /// Update the remote status
