@@ -19,6 +19,18 @@ impl GitRepo {
     /// Create a new GitRepo from a path (branch only, async fields are None)
     pub fn new(path: PathBuf) -> Self {
         let branch = Self::read_branch(&path);
+        let remote_url = Command::new("git")
+            .args(["remote", "get-url", "origin"])
+            .current_dir(&path)
+            .output()
+            .ok()
+            .and_then(|output| {
+                if output.status.success() {
+                    Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+                } else {
+                    None
+                }
+            });
 
         Self {
             path,
@@ -26,7 +38,7 @@ impl GitRepo {
             remote_status: None,
             status: None,
             missing: false,
-            remote_url: None,
+            remote_url,
         }
     }
 
@@ -50,6 +62,11 @@ impl GitRepo {
     /// Mark this repository as missing (deleted)
     pub fn set_missing(&mut self, remote_url: Option<String>) {
         self.missing = true;
+        self.remote_url = remote_url;
+    }
+
+    /// Set the remote URL
+    pub fn set_remote_url(&mut self, remote_url: Option<String>) {
         self.remote_url = remote_url;
     }
 

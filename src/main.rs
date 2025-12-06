@@ -127,44 +127,41 @@ fn add_missing_repos(repos: &mut Vec<GitRepo>, cached_repos: &[CachedRepo], exis
     }
 }
 
-/// Build updated cache from current repos and missing cached repos
-fn build_updated_cache(repos: &[GitRepo], cached_repos: Vec<CachedRepo>, existing_paths: &HashSet<PathBuf>, root_path: &Path) -> Vec<CachedRepo> {
-    repos
+/// Build cache from all repos, sorted alphabetically
+fn build_cache_from_repos(repos: &[GitRepo], root_path: &Path) -> Vec<CachedRepo> {
+    let mut cache: Vec<CachedRepo> = repos
         .iter()
         .filter_map(|repo| {
-            // Get relative path from root
             let relative_path = get_relative_path(repo.path(), root_path)?;
-
             Some(CachedRepo {
                 path: relative_path,
                 remote: repo.get_remote_url(),
             })
         })
-        .chain(
-            // Keep cached repos that are not already in repos list
-            cached_repos.into_iter().filter(|c| !existing_paths.contains(&c.path))
-        )
-        .collect()
+        .collect();
+    
+    // Sort alphabetically by path
+    cache.sort_by(|a, b| a.path.cmp(&b.path));
+    cache
 }
 
-/// Merge discovered repos with cached repos and update the cache
-fn merge_with_cache(repos: &mut Vec<GitRepo>, root_path: &Path) -> Result<()> {
-    let cached_repos = load_repo_cache().unwrap_or_default();
-    let mut existing_paths = build_existing_paths(repos, root_path);
-
-    // Add missing repos from cache
-    add_missing_repos(repos, &cached_repos, &existing_paths, root_path);
-
-    // Mark all paths as existing for cache update
-    for cached in &cached_repos {
-        existing_paths.insert(cached.path.clone());
+/// Merge discovered repos with cached repos
+fn merge_with_cache(repos: &mut Vec<GitRepo>, root_path: &Path, cached_repos: &[CachedRepo]) {
+    let existing_paths = build_existing_paths(repos, root_path);
+    
+    // Merge cached data with existing repos
+    for repo in repos.iter_mut() {
+        if let Some(relative_path) = get_relative_path(repo.path(), root_path)
+            && let Some(cached) = cached_repos.iter().find(|c| c.path == relative_path)
+            && repo.get_remote_url().is_none()
+            && cached.remote.is_some()
+        {
+            repo.set_remote_url(cached.remote.clone());
+        }
     }
 
-    // Build and save updated cache
-    let updated_cache = build_updated_cache(repos, cached_repos, &existing_paths, root_path);
-    save_repo_cache(root_path, &updated_cache)?;
-
-    Ok(())
+    // Add missing repos from cache
+    add_missing_repos(repos, cached_repos, &existing_paths, root_path);
 }
 
 #[tokio::main]
@@ -195,7 +192,8 @@ async fn main() -> Result<()> {
     let is_root = if let Some(root_path) = &settings.root_path
         && &scan_path == root_path
     {
-        merge_with_cache(&mut repos, root_path)?;
+        let cached = load_repo_cache().unwrap_or_default();
+        merge_with_cache(&mut repos, root_path, &cached);
         true
     } else {
         false
@@ -214,18 +212,8 @@ async fn main() -> Result<()> {
     if is_root
         && let Some(root_path) = &settings.root_path
     {
-        let cached_repos = load_repo_cache().unwrap_or_default();
-        let mut existing_paths = HashSet::new();
-
-        // Add all current repo paths (including missing ones) to existing_paths
-        for repo in app.repos() {
-            if let Some(relative_path) = get_relative_path(repo.path(), root_path) {
-                existing_paths.insert(relative_path);
-            }
-        }
-
-        let updated_cache = build_updated_cache(app.repos(), cached_repos, &existing_paths, root_path);
-        save_repo_cache(root_path, &updated_cache)?;
+        let cache = build_cache_from_repos(app.repos(), root_path);
+        save_repo_cache(root_path, &cache)?;
     }
 
     // If a repository was selected, change to that directory
