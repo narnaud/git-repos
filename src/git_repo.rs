@@ -12,6 +12,7 @@ pub struct GitRepo {
     remote_status: Option<String>,
     status: Option<String>,
     missing: bool,
+    remote_url: Option<String>,
 }
 
 impl GitRepo {
@@ -25,17 +26,19 @@ impl GitRepo {
             remote_status: None,
             status: None,
             missing: false,
+            remote_url: None,
         }
     }
 
     /// Create a new missing GitRepo (exists in cache but not on disk)
-    pub fn new_missing(path: PathBuf) -> Self {
+    pub fn new_missing(path: PathBuf, remote_url: Option<String>) -> Self {
         Self {
             path,
             branch: String::new(),
             remote_status: None,
             status: None,
             missing: true,
+            remote_url,
         }
     }
 
@@ -101,6 +104,11 @@ impl GitRepo {
 
     /// Get the remote URL (origin)
     pub fn get_remote_url(&self) -> Option<String> {
+        // If this is a missing repo, return cached remote URL
+        if self.missing {
+            return self.remote_url.clone();
+        }
+
         let output = Command::new("git")
             .args(["remote", "get-url", "origin"])
             .current_dir(&self.path)
@@ -112,6 +120,46 @@ impl GitRepo {
         } else {
             None
         }
+    }
+
+    /// Clone this repository to its expected path
+    pub fn clone_repository(&self) -> Result<()> {
+        if !self.missing {
+            return Err(color_eyre::eyre::eyre!("Repository already exists"));
+        }
+
+        let remote_url = self.remote_url.as_ref()
+            .ok_or_else(|| color_eyre::eyre::eyre!("No remote URL for repository"))?;
+
+        // Create parent directory if it doesn't exist
+        if let Some(parent) = self.path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        // Check if it's a GitHub repository
+        let is_github = remote_url.contains("github.com");
+
+        let output = if is_github {
+            // Use gh repo clone for GitHub repos
+            Command::new("gh")
+                .args(["repo", "clone", remote_url, &self.path.to_string_lossy()])
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .output()
+        } else {
+            // Use git clone for non-GitHub repos
+            Command::new("git")
+                .args(["clone", remote_url, &self.path.to_string_lossy()])
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .output()
+        }?;
+
+        if !output.status.success() {
+            return Err(color_eyre::eyre::eyre!("Failed to clone repository"));
+        }
+
+        Ok(())
     }
 
     /// Read the current branch name from .git/HEAD

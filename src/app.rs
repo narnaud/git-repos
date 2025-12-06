@@ -243,6 +243,9 @@ impl App {
                         KeyCode::Char('d') | KeyCode::Char('D') => {
                             self.handle_drop_repo();
                         }
+                        KeyCode::Char('c') | KeyCode::Char('C') => {
+                            self.handle_clone_repo();
+                        }
                         _ => {}
                     }
                 }
@@ -393,7 +396,7 @@ impl App {
                 {
                     // Remove from repos list
                     self.repos.remove(selected);
-                    
+
                     // Adjust selection
                     if !self.repos.is_empty() {
                         let new_selected = if selected >= self.repos.len() {
@@ -405,7 +408,7 @@ impl App {
                     } else {
                         self.table_state.select(None);
                     }
-                    
+
                     self.needs_redraw = true;
                 }
             }
@@ -414,7 +417,7 @@ impl App {
             if std::fs::remove_dir_all(repo.path()).is_ok() {
                 // Keep in cache if we're in root mode, just remove from current list
                 self.repos.remove(selected);
-                
+
                 // Adjust selection
                 if !self.repos.is_empty() {
                     let new_selected = if selected >= self.repos.len() {
@@ -426,9 +429,49 @@ impl App {
                 } else {
                     self.table_state.select(None);
                 }
-                
+
                 self.needs_redraw = true;
             }
+        }
+    }
+
+    /// Handle cloning a missing repository
+    fn handle_clone_repo(&mut self) {
+        let Some(selected) = self.table_state.selected() else {
+            return;
+        };
+
+        let Some(repo) = self.repos.get(selected) else {
+            return;
+        };
+
+        // Only clone missing repositories
+        if !repo.is_missing() {
+            return;
+        }
+
+        // Clone the repository
+        if repo.clone_repository().is_ok() {
+            // Refresh the repository by recreating it as a normal repo
+            let path = repo.path().to_path_buf();
+            let mut new_repo = GitRepo::new(path);
+
+            // Load remote status and status asynchronously
+            let path_for_remote = new_repo.path().to_path_buf();
+            let remote_status = tokio::task::block_in_place(|| {
+                GitRepo::read_remote_status(&path_for_remote)
+            });
+            new_repo.set_remote_status(remote_status);
+
+            let path_for_status = new_repo.path().to_path_buf();
+            let status = tokio::task::block_in_place(|| {
+                GitRepo::read_status(&path_for_status)
+            });
+            new_repo.set_status(status);
+
+            // Replace the missing repo with the cloned one
+            self.repos[selected] = new_repo;
+            self.needs_redraw = true;
         }
     }
 }

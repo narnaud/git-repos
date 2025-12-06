@@ -122,7 +122,7 @@ fn add_missing_repos(repos: &mut Vec<GitRepo>, cached_repos: &[CachedRepo], exis
     for cached in cached_repos {
         if !existing_paths.contains(&cached.path) {
             let full_path = root_path.join(&cached.path);
-            repos.push(GitRepo::new_missing(full_path));
+            repos.push(GitRepo::new_missing(full_path, cached.remote.clone()));
         }
     }
 }
