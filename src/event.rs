@@ -13,7 +13,7 @@ pub enum GitDataUpdate {
     CloneProgress(usize),
     CloneComplete(usize),
     DeleteProgress(usize),
-    DeleteComplete(usize, Option<String>), // index, remote_url
+    DeleteComplete(usize), // index
 }
 
 /// Terminal event types

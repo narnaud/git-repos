@@ -19,18 +19,7 @@ impl GitRepo {
     /// Create a new GitRepo from a path (branch only, async fields are None)
     pub fn new(path: PathBuf) -> Self {
         let branch = Self::read_branch(&path);
-        let remote_url = Command::new("git")
-            .args(["remote", "get-url", "origin"])
-            .current_dir(&path)
-            .output()
-            .ok()
-            .and_then(|output| {
-                if output.status.success() {
-                    Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
-                } else {
-                    None
-                }
-            });
+        let remote_url = Self::read_remote_url(&path);
 
         Self {
             path,
@@ -60,14 +49,8 @@ impl GitRepo {
     }
 
     /// Mark this repository as missing (deleted)
-    pub fn set_missing(&mut self, remote_url: Option<String>) {
+    pub fn set_missing(&mut self) {
         self.missing = true;
-        self.remote_url = remote_url;
-    }
-
-    /// Set the remote URL
-    pub fn set_remote_url(&mut self, remote_url: Option<String>) {
-        self.remote_url = remote_url;
     }
 
     /// Update the remote status
@@ -86,7 +69,6 @@ impl GitRepo {
     }
 
     /// Get the repository path
-    #[allow(dead_code)]
     pub fn path(&self) -> &Path {
         &self.path
     }
@@ -125,24 +107,9 @@ impl GitRepo {
         self.status.as_deref().unwrap_or("loading...")
     }
 
-    /// Get the remote URL (origin)
+    /// Get the cached remote URL (origin)
     pub fn get_remote_url(&self) -> Option<String> {
-        // If this is a missing repo, return cached remote URL
-        if self.missing {
-            return self.remote_url.clone();
-        }
-
-        let output = Command::new("git")
-            .args(["remote", "get-url", "origin"])
-            .current_dir(&self.path)
-            .output()
-            .ok()?;
-
-        if output.status.success() {
-            Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
-        } else {
-            None
-        }
+        self.remote_url.clone()
     }
 
     /// Clone this repository to its expected path
@@ -183,6 +150,22 @@ impl GitRepo {
         }
 
         Ok(())
+    }
+
+    /// Read the remote URL from git config
+    fn read_remote_url(path: &Path) -> Option<String> {
+        Command::new("git")
+            .args(["remote", "get-url", "origin"])
+            .current_dir(path)
+            .output()
+            .ok()
+            .and_then(|output| {
+                if output.status.success() {
+                    Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+                } else {
+                    None
+                }
+            })
     }
 
     /// Read the current branch name from .git/HEAD
