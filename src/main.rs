@@ -31,6 +31,10 @@ struct Args {
     /// Update local branches with fast-forward merge after fetch
     #[arg(short, long)]
     update: bool,
+
+    /// Write selected repository path to this file on exit (for shell integration)
+    #[arg(long, value_name = "PATH")]
+    cwd_file: Option<PathBuf>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -129,9 +133,10 @@ async fn main() -> Result<()> {
         save_repos_to_cache(app.repos(), root_path)?;
     }
 
-    // If a repository was selected, change to that directory
-    if let Some(repo_path) = app.selected_repo {
-        println!("{}", repo_path);
+
+    // If a repository was selected and --cwd-file is set, write to the file
+    if let (Some(repo_path), Some(cwd_file)) = (app.selected_repo, args.cwd_file) {
+        std::fs::write(cwd_file, repo_path)?;
     }
 
     Ok(())

@@ -145,7 +145,11 @@ Missing repositories can be:
 
 ### Shell integration (recommended)
 
-Since a program cannot change the shell's working directory, you need to use a wrapper function to enable the "change directory on Enter" feature.
+
+Shell integration (recommended)
+--------------------------------
+
+Since a program cannot change the shell's working directory, you need a wrapper that uses a temp file and the `--cwd-file` flag.
 
 #### PowerShell
 
@@ -153,9 +157,13 @@ Add this to your PowerShell profile (`$PROFILE`):
 
 ```powershell
 function gr {
-    $path = git-repos $args
-    if ($LASTEXITCODE -eq 0 -and $path) {
-        Set-Location $path
+    $tmp = "$env:TEMP\git-repos-cwd.txt"
+    Remove-Item $tmp -ErrorAction SilentlyContinue
+    git-repos --cwd-file $tmp $args
+    if (Test-Path $tmp) {
+        $path = Get-Content $tmp -Raw
+        if ($path) { Set-Location $path }
+        Remove-Item $tmp
     }
 }
 ```
@@ -166,9 +174,12 @@ Add this to your `.bashrc` or `.zshrc`:
 
 ```bash
 gr() {
-    local path=$(git-repos "$@")
-    if [ $? -eq 0 ] && [ -n "$path" ]; then
-        cd "$path"
+    tmp="/tmp/git-repos-cwd.txt"
+    rm -f "$tmp"
+    git-repos --cwd-file "$tmp" "$@"
+    if [ -s "$tmp" ]; then
+        cd "$(cat "$tmp")"
+        rm -f "$tmp"
     fi
 }
 ```
