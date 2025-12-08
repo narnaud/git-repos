@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0](https://github.com/narnaud/git-repos/compare/v0.2.0...v0.3.0) (2025-12-08)
+
+
+### Features ✨
+
+* add --cwd-file for shell integration ([eb87ede](https://github.com/narnaud/git-repos/commit/eb87ede2eb6e9d3219ebe4d66d7e7fbf71b6daaa))
+
+
+### Bug Fixes 🐞
+
+* clippy compliance and refactor Enter key logic ([8ff5161](https://github.com/narnaud/git-repos/commit/8ff51617d159e410253afb331c438408c21f1b30))
+* strip UNC prefix when saving selected repo path ([2c805b9](https://github.com/narnaud/git-repos/commit/2c805b9ad94ea0f63d96482e4db2d10251ef3545))
+
+
+### Changes
+
+* centralize UNC path stripping in util.rs ([dab8080](https://github.com/narnaud/git-repos/commit/dab8080330a294a7faf31ec0d99782732e1a09b9))
+
 ## [0.2.0](https://github.com/narnaud/git-repos/compare/v0.1.0...v0.2.0) (2025-12-06)
 
 
