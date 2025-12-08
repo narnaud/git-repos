@@ -125,7 +125,14 @@ async fn main() -> Result<()> {
 
     // Run the TUI
     let root_for_app = is_root.then(|| settings.root_path.clone()).flatten();
-    let mut app = App::new_with_root(repos, &scan_path, !args.no_fetch, update_enabled, root_for_app);
+    let mut app = App::new_with_root(
+        repos,
+        &scan_path,
+        !args.no_fetch,
+        update_enabled,
+        root_for_app,
+        args.cwd_file.is_some(),
+    );
     app.run().await?;
 
     // Save cache if we were scanning root directory

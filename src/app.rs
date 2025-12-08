@@ -69,6 +69,7 @@ pub struct App {
     search_query: String,
     search_mode: bool,
     root_path: Option<std::path::PathBuf>,
+    pub cwd_file_enabled: bool,
 }
 
 impl App {
@@ -114,7 +115,7 @@ impl App {
 
     /// Create a new App instance
     pub fn new(repos: Vec<GitRepo>, scan_path: &Path, fetch: bool, update: bool) -> Self {
-        Self::new_with_root(repos, scan_path, fetch, update, None)
+        Self::new_with_root(repos, scan_path, fetch, update, None, false)
     }
 
     /// Create a new App instance with optional root path
@@ -124,6 +125,7 @@ impl App {
         fetch: bool,
         update: bool,
         root_path: Option<std::path::PathBuf>,
+        cwd_file_enabled: bool,
     ) -> Self {
         Self::sort_repos(&mut repos);
 
@@ -131,7 +133,6 @@ impl App {
         if !repos.is_empty() {
             table_state.select(Some(0));
         }
-
         // Convert to normal path display (strip \?\ prefix on Windows)
         let path_str = scan_path.display().to_string();
         let display_path = strip_unc_prefix(&path_str).to_string();
@@ -161,6 +162,7 @@ impl App {
             search_query: String::new(),
             search_mode: false,
             root_path,
+            cwd_file_enabled,
         }
     }
 
@@ -272,9 +274,8 @@ impl App {
                             self.should_quit = true;
                         }
                         KeyCode::Enter => {
-                            if let Some(selected) = self.table_state.selected()
-                                && let Some(repo) = self.repos.get(selected)
-                            {
+                            if self.cwd_file_enabled &&
+                               let Some(repo) = self.table_state.selected().and_then(|i| self.repos.get(i)) {
                                 self.selected_repo = Some(repo.path().display().to_string());
                                 self.should_quit = true;
                             }
@@ -497,7 +498,7 @@ impl App {
         if is_missing {
             // Missing repo: remove from cache
             if let Some(root_path) = &self.root_path {
-                let cleaned_path = strip_unc_pathbuf(&repo_path);
+                let cleaned_path = strip_unc_pathbuf(repo_path.as_path());
 
                 if let Ok(relative_path) = cleaned_path.strip_prefix(root_path)
                     && crate::config::remove_from_cache(relative_path).is_ok()

@@ -63,7 +63,7 @@ impl Settings {
     /// Set the root path and save
     pub fn set_root_path(&mut self, path: PathBuf) -> Result<()> {
         // Remove the \\?\ prefix that Windows canonicalize adds
-        let cleaned_path = strip_unc_pathbuf(&path);
+        let cleaned_path = strip_unc_pathbuf(path.as_path());
         self.root_path = Some(cleaned_path);
         self.save()
     }

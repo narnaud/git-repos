@@ -8,7 +8,7 @@ use crate::util::strip_unc_pathbuf;
 
 /// Get relative path from root, handling \?\ prefix
 fn get_relative_path(repo_path: &Path, root_path: &Path) -> Option<PathBuf> {
-    let cleaned_path = strip_unc_pathbuf(&repo_path.to_path_buf());
+    let cleaned_path = strip_unc_pathbuf(repo_path);
     cleaned_path.strip_prefix(root_path).ok().map(|p| p.to_path_buf())
 }
 
