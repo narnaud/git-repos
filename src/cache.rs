@@ -2,20 +2,13 @@ use crate::config::{load_repo_cache, save_repo_cache, CachedRepo};
 use crate::git_repo::GitRepo;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use crate::util::strip_unc_pathbuf;
 
-/// Clean a path by removing Windows \\?\ prefix
-fn clean_path(path: &Path) -> PathBuf {
-    if let Some(path_str) = path.to_str()
-        && let Some(stripped) = path_str.strip_prefix(r"\\?\")
-    {
-        return PathBuf::from(stripped);
-    }
-    path.to_path_buf()
-}
+// Use strip_unc_pathbuf from util.rs
 
-/// Get relative path from root, handling \\?\ prefix
+/// Get relative path from root, handling \?\ prefix
 fn get_relative_path(repo_path: &Path, root_path: &Path) -> Option<PathBuf> {
-    let cleaned_path = clean_path(repo_path);
+    let cleaned_path = strip_unc_pathbuf(&repo_path.to_path_buf());
     cleaned_path.strip_prefix(root_path).ok().map(|p| p.to_path_buf())
 }
 

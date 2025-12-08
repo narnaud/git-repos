@@ -8,10 +8,12 @@ mod config;
 mod event;
 mod git_repo;
 mod ui;
+mod util;
 
 use app::App;
 use cache::{load_repos_with_cache, save_repos_to_cache};
 use config::Settings;
+use util::strip_unc_prefix;
 
 /// CLI tool for managing git repositories
 #[derive(Parser, Debug)]
@@ -136,12 +138,7 @@ async fn main() -> Result<()> {
 
     // If a repository was selected and --cwd-file is set, write to the file
     if let (Some(repo_path), Some(cwd_file)) = (app.selected_repo, args.cwd_file) {
-        // Remove Windows UNC prefix if present
-        let cleaned = if repo_path.starts_with(r"\\?\") {
-            &repo_path[4..]
-        } else {
-            &repo_path
-        };
+        let cleaned = strip_unc_prefix(&repo_path);
         std::fs::write(cwd_file, cleaned)?;
     }
 

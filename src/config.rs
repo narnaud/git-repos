@@ -2,6 +2,7 @@ use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+use crate::util::strip_unc_pathbuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Settings {
@@ -62,13 +63,7 @@ impl Settings {
     /// Set the root path and save
     pub fn set_root_path(&mut self, path: PathBuf) -> Result<()> {
         // Remove the \\?\ prefix that Windows canonicalize adds
-        let path_str = path.to_string_lossy();
-        let cleaned_path = if let Some(stripped) = path_str.strip_prefix(r"\\?\") {
-            PathBuf::from(stripped)
-        } else {
-            path
-        };
-
+        let cleaned_path = strip_unc_pathbuf(&path);
         self.root_path = Some(cleaned_path);
         self.save()
     }

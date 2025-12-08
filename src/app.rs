@@ -1,5 +1,6 @@
 use crate::event::{EventHandler, GitDataUpdate, TerminalEvent};
 use crate::git_repo::GitRepo;
+use crate::util::{strip_unc_prefix, strip_unc_pathbuf};
 use color_eyre::Result;
 use crossterm::{
     event::{KeyCode, KeyModifiers},
@@ -131,16 +132,9 @@ impl App {
             table_state.select(Some(0));
         }
 
-        // Convert to normal path display (strip \\?\ prefix on Windows)
+        // Convert to normal path display (strip \?\ prefix on Windows)
         let path_str = scan_path.display().to_string();
-        let display_path = if cfg!(windows) && path_str.starts_with(r"\\?\") {
-            path_str
-                .strip_prefix(r"\\?\")
-                .unwrap_or(&path_str)
-                .to_string()
-        } else {
-            path_str
-        };
+        let display_path = strip_unc_prefix(&path_str).to_string();
 
         // Create event handler and spawn git data loading tasks
         let repos_clone = repos.clone();
@@ -503,12 +497,7 @@ impl App {
         if is_missing {
             // Missing repo: remove from cache
             if let Some(root_path) = &self.root_path {
-                let repo_path_str = repo_path.to_str().unwrap_or("");
-                let cleaned_path = if let Some(stripped) = repo_path_str.strip_prefix(r"\\?\") {
-                    std::path::PathBuf::from(stripped)
-                } else {
-                    repo_path.clone()
-                };
+                let cleaned_path = strip_unc_pathbuf(&repo_path);
 
                 if let Ok(relative_path) = cleaned_path.strip_prefix(root_path)
                     && crate::config::remove_from_cache(relative_path).is_ok()
