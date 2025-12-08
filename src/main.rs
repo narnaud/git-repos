@@ -136,7 +136,13 @@ async fn main() -> Result<()> {
 
     // If a repository was selected and --cwd-file is set, write to the file
     if let (Some(repo_path), Some(cwd_file)) = (app.selected_repo, args.cwd_file) {
-        std::fs::write(cwd_file, repo_path)?;
+        // Remove Windows UNC prefix if present
+        let cleaned = if repo_path.starts_with(r"\\?\") {
+            &repo_path[4..]
+        } else {
+            &repo_path
+        };
+        std::fs::write(cwd_file, cleaned)?;
     }
 
     Ok(())
