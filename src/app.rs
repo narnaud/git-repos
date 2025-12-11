@@ -95,8 +95,14 @@ impl App {
     }
 
     /// Spawn task to load git data for a repository
+    ///
+    /// Now sends FetchProgress and FetchComplete events for proper animation.
     fn spawn_git_data_load(tx: tokio::sync::mpsc::UnboundedSender<GitDataUpdate>, idx: usize, path: std::path::PathBuf) {
+        let tx_clone = tx.clone();
         tokio::spawn(async move {
+            // Start fetch animation
+            let _ = tx_clone.send(GitDataUpdate::FetchProgress(idx));
+
             let remote_status = tokio::task::spawn_blocking({
                 let path = path.clone();
                 move || GitRepo::read_remote_status(&path)
@@ -108,8 +114,11 @@ impl App {
                 .await
                 .unwrap_or_else(|_| "error".to_string());
 
-            let _ = tx.send(GitDataUpdate::RemoteStatus(idx, remote_status));
-            let _ = tx.send(GitDataUpdate::Status(idx, status));
+            let _ = tx_clone.send(GitDataUpdate::RemoteStatus(idx, remote_status));
+            let _ = tx_clone.send(GitDataUpdate::Status(idx, status));
+
+            // End fetch animation
+            let _ = tx_clone.send(GitDataUpdate::FetchComplete(idx));
         });
     }
 
@@ -265,50 +274,90 @@ impl App {
     }
 
     /// Handle key press in normal mode
+    ///
+    /// Shortcuts:
+    ///   q / Q: Quit
+    ///   Ctrl+C: Quit
+    ///   Enter: Select repo (if cwd_file_enabled)
+    ///   j / Down: Next repo
+    ///   k / Up: Previous repo
+    ///   [ / ]: Cycle filter mode
+    ///   /: Search
+    ///   d / D: Drop repo
+    ///   c / C: Clone missing repo
+    ///   u / U: Update selected repo (fetch + status)
     fn handle_normal_key(&mut self, code: KeyCode, modifiers: KeyModifiers) {
         match code {
-                        KeyCode::Char('q') | KeyCode::Char('Q') => {
-                            self.should_quit = true;
-                        }
-                        KeyCode::Char('c') if modifiers.contains(KeyModifiers::CONTROL) => {
-                            self.should_quit = true;
-                        }
-                        KeyCode::Enter => {
-                            if self.cwd_file_enabled &&
-                               let Some(repo) = self.table_state.selected().and_then(|i| self.repos.get(i)) {
-                                self.selected_repo = Some(repo.path().display().to_string());
-                                self.should_quit = true;
-                            }
-                        }
-                        KeyCode::Down | KeyCode::Char('j') => {
-                            self.next();
-                        }
-                        KeyCode::Up | KeyCode::Char('k') => {
-                            self.previous();
-                        }
-                        KeyCode::Char('[') => {
-                            self.filter_mode = self.filter_mode.previous();
-                            self.table_state.select(Some(0));
-                            self.needs_redraw = true;
-                        }
-                        KeyCode::Char(']') => {
-                            self.filter_mode = self.filter_mode.next();
-                            self.table_state.select(Some(0));
-                            self.needs_redraw = true;
-                        }
-                        KeyCode::Char('/') => {
-                            self.search_mode = true;
-                            self.search_query.clear();
-                            self.needs_redraw = true;
-                        }
-                        KeyCode::Char('d') | KeyCode::Char('D') => {
-                            self.handle_drop_repo();
-                        }
-                        KeyCode::Char('c') | KeyCode::Char('C') => {
-                            self.handle_clone_repo();
-                        }
+            KeyCode::Char('q') | KeyCode::Char('Q') => {
+                self.should_quit = true;
+            }
+            KeyCode::Char('c') if modifiers.contains(KeyModifiers::CONTROL) => {
+                self.should_quit = true;
+            }
+            KeyCode::Enter => {
+                if self.cwd_file_enabled &&
+                   let Some(repo) = self.table_state.selected().and_then(|i| self.repos.get(i)) {
+                    self.selected_repo = Some(repo.path().display().to_string());
+                    self.should_quit = true;
+                }
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.next();
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.previous();
+            }
+            KeyCode::Char('[') => {
+                self.filter_mode = self.filter_mode.previous();
+                self.table_state.select(Some(0));
+                self.needs_redraw = true;
+            }
+            KeyCode::Char(']') => {
+                self.filter_mode = self.filter_mode.next();
+                self.table_state.select(Some(0));
+                self.needs_redraw = true;
+            }
+            KeyCode::Char('/') => {
+                self.search_mode = true;
+                self.search_query.clear();
+                self.needs_redraw = true;
+            }
+            KeyCode::Char('d') | KeyCode::Char('D') => {
+                self.handle_drop_repo();
+            }
+            KeyCode::Char('c') | KeyCode::Char('C') => {
+                self.handle_clone_repo();
+            }
+            KeyCode::Char('u') | KeyCode::Char('U') => {
+                self.handle_update_repo();
+            }
             _ => {}
         }
+    }
+
+    /// Update the selected repository (fetch + status), with animation.
+    ///
+    /// This is triggered by the 'u' shortcut in normal mode.
+    fn handle_update_repo(&mut self) {
+        let Some(selected) = self.table_state.selected() else {
+            return;
+        };
+        let Some(repo) = self.repos.get(selected) else {
+            return;
+        };
+        if repo.is_missing() {
+            return;
+        }
+        // Mark as fetching for animation
+        if !self.fetching_repos.contains(&selected) {
+            self.fetching_repos.push(selected);
+        }
+        self.needs_redraw = true;
+        let tx = self.event_handler.git_tx();
+        let path = repo.path().to_path_buf();
+        let idx = selected;
+        // Spawn git data load for this repo only
+        Self::spawn_git_data_load(tx, idx, path);
     }
 
     /// Handle git data updates
