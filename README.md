@@ -199,6 +199,7 @@ gr D:\projects  # Scan specific directory
 - **Esc** - Exit search mode and clear search filter
 - **d** - Delete selected repository (marks as missing) or remove from cache if already missing
 - **c** - Clone selected missing repository (auto-detects GitHub for `gh` vs `git clone`)
+- **u** - Update selected repository (fetch + status)
 - **Enter** - Change directory to selected repository (exits the app)
 - **q** or **Ctrl-C** - Quit the application
 
