@@ -256,12 +256,12 @@ impl App {
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
                 Span::raw(" | "),
                 Span::styled(progress_text, Style::default().fg(Color::Yellow)),
-                Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Clone: c | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Update: u | Clone: c | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
             ])
         } else {
             Line::from(vec![
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
-                Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Clone: c | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Update: u | Clone: c | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
             ])
         };
 
