@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0](https://github.com/narnaud/git-repos/compare/v0.3.0...v0.4.0) (2025-12-13)
+
+
+### Features ✨
+
+* add 'u' shortcut to update selected repo with animation ([054975f](https://github.com/narnaud/git-repos/commit/054975f07e8f428cca4d9a8f10ad565200abcc9a))
+* exclude repositories starting with _ from cache ([5d2cd0a](https://github.com/narnaud/git-repos/commit/5d2cd0ac340a5c2f2eeb80105f11b036fdaf489a))
+
+
+### Bug Fixes 🐞
+
+* manual update now performs fetch with fast-forward ([ec6469b](https://github.com/narnaud/git-repos/commit/ec6469b422614e0e64c340d3a200fb8a4913656e))
+
+
+### Documentation
+
+* add 'u' shortcut to update selected repo in README ([d8bc377](https://github.com/narnaud/git-repos/commit/d8bc377b6a593b53f83b54d3e3612e1afe91023a))
+
 ## [0.3.0](https://github.com/narnaud/git-repos/compare/v0.2.0...v0.3.0) (2025-12-08)
 
 
