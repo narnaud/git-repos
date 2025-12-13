@@ -42,6 +42,14 @@ fn build_cache_from_repos(repos: &[GitRepo], root_path: &Path) -> Vec<CachedRepo
         .iter()
         .filter_map(|repo| {
             let relative_path = get_relative_path(repo.path(), root_path)?;
+            
+            // Skip repos whose folder name starts with `_`
+            if let Some(folder_name) = relative_path.file_name() {
+                if folder_name.to_string_lossy().starts_with('_') {
+                    return None;
+                }
+            }
+            
             Some(CachedRepo {
                 path: relative_path,
                 remote: repo.get_remote_url(),
