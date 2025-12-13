@@ -122,6 +122,56 @@ impl App {
         });
     }
 
+    /// Spawn task to fetch and update a repository (manual update with fast-forward)
+    fn spawn_manual_update(tx: tokio::sync::mpsc::UnboundedSender<GitDataUpdate>, idx: usize, path: std::path::PathBuf) {
+        let tx_clone = tx.clone();
+        tokio::spawn(async move {
+            // Start fetch animation
+            let _ = tx_clone.send(GitDataUpdate::FetchProgress(idx));
+
+            // First read initial status
+            let remote_status = tokio::task::spawn_blocking({
+                let path = path.clone();
+                move || GitRepo::read_remote_status(&path)
+            })
+            .await
+            .unwrap_or_else(|_| "error".to_string());
+
+            // Perform fetch with fast-forward if repo has remote
+            if remote_status != "local-only" && remote_status != "error" {
+                let fetch_result = tokio::task::spawn_blocking({
+                    let path = path.clone();
+                    move || GitRepo::fetch(&path, true)  // Always fast-forward for manual update
+                })
+                .await;
+
+                if fetch_result.is_ok() {
+                    // Re-read remote status after fetch
+                    let new_remote_status = tokio::task::spawn_blocking({
+                        let path = path.clone();
+                        move || GitRepo::read_remote_status(&path)
+                    })
+                    .await
+                    .unwrap_or_else(|_| "error".to_string());
+
+                    let _ = tx_clone.send(GitDataUpdate::RemoteStatus(idx, new_remote_status));
+                }
+            } else {
+                let _ = tx_clone.send(GitDataUpdate::RemoteStatus(idx, remote_status));
+            }
+
+            // Read working tree status (might have changed after fast-forward)
+            let status = tokio::task::spawn_blocking(move || GitRepo::read_status(&path))
+                .await
+                .unwrap_or_else(|_| "error".to_string());
+
+            let _ = tx_clone.send(GitDataUpdate::Status(idx, status));
+
+            // End fetch animation
+            let _ = tx_clone.send(GitDataUpdate::FetchComplete(idx));
+        });
+    }
+
     /// Create a new App instance
     pub fn new(repos: Vec<GitRepo>, scan_path: &Path, fetch: bool, update: bool) -> Self {
         Self::new_with_root(repos, scan_path, fetch, update, None, false)
@@ -356,8 +406,8 @@ impl App {
         let tx = self.event_handler.git_tx();
         let path = repo.path().to_path_buf();
         let idx = selected;
-        // Spawn git data load for this repo only
-        Self::spawn_git_data_load(tx, idx, path);
+        // Manual update always fetches with fast-forward
+        Self::spawn_manual_update(tx, idx, path);
     }
 
     /// Handle git data updates
