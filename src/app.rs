@@ -516,6 +516,11 @@ impl App {
 
     /// Check if repository matches filter mode
     fn matches_filter(&self, repo: &GitRepo) -> bool {
+        // Missing repos only show in "All" filter
+        if repo.is_missing() && self.filter_mode != FilterMode::All {
+            return false;
+        }
+
         match self.filter_mode {
             FilterMode::All => true,
             FilterMode::NoUpstream => {
