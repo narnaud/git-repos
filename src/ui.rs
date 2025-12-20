@@ -102,10 +102,10 @@ impl App {
                                 Span::styled("All", Style::default().fg(Color::White))
                             },
                             Span::raw(" - "),
-                            if self.filter_mode == crate::app::FilterMode::NeedsAttention {
-                                Span::styled("Needs Attention", Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD))
+                            if self.filter_mode == crate::app::FilterMode::NoUpstream {
+                                Span::styled("No Upstream", Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD))
                             } else {
-                                Span::styled("Needs Attention", Style::default().fg(Color::White))
+                                Span::styled("No Upstream", Style::default().fg(Color::White))
                             },
                             Span::raw(" - "),
                             if self.filter_mode == crate::app::FilterMode::Behind {

@@ -15,7 +15,7 @@ use std::path::Path;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FilterMode {
     All,
-    NeedsAttention,
+    NoUpstream,
     Modified,
     Behind,
 }
@@ -24,8 +24,8 @@ impl FilterMode {
     /// Get the next filter mode in the cycle
     pub fn next(&self) -> Self {
         match self {
-            FilterMode::All => FilterMode::NeedsAttention,
-            FilterMode::NeedsAttention => FilterMode::Behind,
+            FilterMode::All => FilterMode::NoUpstream,
+            FilterMode::NoUpstream => FilterMode::Behind,
             FilterMode::Behind => FilterMode::Modified,
             FilterMode::Modified => FilterMode::All,
         }
@@ -36,8 +36,8 @@ impl FilterMode {
         match self {
             FilterMode::All => FilterMode::Modified,
             FilterMode::Modified => FilterMode::Behind,
-            FilterMode::Behind => FilterMode::NeedsAttention,
-            FilterMode::NeedsAttention => FilterMode::All,
+            FilterMode::Behind => FilterMode::NoUpstream,
+            FilterMode::NoUpstream => FilterMode::All,
         }
     }
 
@@ -45,7 +45,7 @@ impl FilterMode {
     pub fn display_name(&self) -> &str {
         match self {
             FilterMode::All => "All",
-            FilterMode::NeedsAttention => "Needs Attention",
+            FilterMode::NoUpstream => "No Upstream",
             FilterMode::Modified => "Modified",
             FilterMode::Behind => "Behind",
         }
@@ -518,11 +518,9 @@ impl App {
     fn matches_filter(&self, repo: &GitRepo) -> bool {
         match self.filter_mode {
             FilterMode::All => true,
-            FilterMode::NeedsAttention => {
+            FilterMode::NoUpstream => {
                 let remote = repo.remote_status();
-                let status = repo.status();
-                (remote.contains('↓') || remote == "no-tracking")
-                    || (status != "clean" && status != "loading...")
+                remote == "local-only" || remote == "no-tracking"
             }
             FilterMode::Modified => {
                 let status = repo.status();

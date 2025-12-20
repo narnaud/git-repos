@@ -44,7 +44,7 @@ Git-Repos is a command-line tool with a Text User Interface (TUI) that helps you
 - 🔄 **Auto-fetch** - Automatically fetch all repositories with remotes asynchronously
 - 🔀 **Auto-update** - Optionally fast-forward merge local branches after fetch
 - 🔍 **Search filter** - Press `/` to search repositories by name
-- 📋 **View modes** - Filter repositories by: All, Needs Attention, Behind, Modified
+- 📋 **View modes** - Filter repositories by: All, No Upstream, Behind, Modified
 - 🎨 **Color-coded display** - Visual indicators for repository states
 - ⌨️ **Keyboard navigation** - Vim-style (j/k) and arrow key navigation
 - 🚀 **Quick navigation** - Press Enter to change directory to selected repository
@@ -206,7 +206,7 @@ gr D:\projects  # Scan specific directory
 ### View Modes
 
 - **All** - Show all repositories
-- **Needs Attention** - Show repositories that are behind, modified, or have no tracking branch
+- **No Upstream** - Show repositories that are local-only or have no tracking branch
 - **Behind** - Show only repositories that are behind their upstream
 - **Modified** - Show only repositories with uncommitted changes
 
@@ -223,7 +223,7 @@ The current mode is highlighted at the bottom right of the table.
 │   narnaud/git-repos     │ main    │ local-only    │ 1S 2M      │ 5 minutes ago by Nicolas Arnaud      │
 │   oss/ratatui           │ main    │ ⟳ loading...  │ clean      │ ⟳ loading...                         │
 │   user/deleted-repo     │ -       │ -             │ missing    │ -                                    │
-├─────────────────────────┴─────────┴───────────────┴────────────┴──All─[Needs Attention]─Behind─Modified┤
+├─────────────────────────┴─────────┴───────────────┴────────────┴──All─[No Upstream]─Behind─Modified────┤
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 Found 5 repositories (1 missing) | ⠋ Fetching 2 repositories... | Mode: [/] | Search: / | Quit: q or Ctrl-C
 ```
