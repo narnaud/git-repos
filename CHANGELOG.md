@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/narnaud/git-repos/compare/v0.4.0...v0.5.0) (2025-12-20)
+
+
+### Features ✨
+
+* replace 'Needs Attention' filter with 'No Upstream' filter ([55ee4ec](https://github.com/narnaud/git-repos/commit/55ee4ecb75dab863dcad51a9115d983d46b4311d))
+
+
+### Bug Fixes 🐞
+
+* exclude missing repos from filtered views ([d46ea4c](https://github.com/narnaud/git-repos/commit/d46ea4c9cf5b0ef8c750c7f94f0375bc76a36f03))
+
 ## [0.4.0](https://github.com/narnaud/git-repos/compare/v0.3.0...v0.4.0) (2025-12-13)
 
 
