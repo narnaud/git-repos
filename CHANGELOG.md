@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/narnaud/git-repos/compare/v0.5.0...v0.6.0) (2026-01-30)
+
+
+### Features ✨
+
+* add Confirmation when dropping a repository ([82324c0](https://github.com/narnaud/git-repos/commit/82324c0d1751191bc6e196eeac39962a4499317c))
+
 ## [0.5.0](https://github.com/narnaud/git-repos/compare/v0.4.0...v0.5.0) (2025-12-20)
 
 
