@@ -138,6 +138,20 @@ impl App {
 
     /// Render the status bar
     fn render_status_bar(&self, area: Rect, buf: &mut Buffer) {
+        // In confirmation mode, show confirmation prompt
+        if self.is_confirmation_mode() {
+            if let Some(repo_name) = self.confirmation_repo_name() {
+                let confirm_text = Line::from(vec![
+                    Span::styled("Delete repository ", Style::default().fg(Color::Yellow)),
+                    Span::styled(repo_name, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+                    Span::styled("? ", Style::default().fg(Color::Yellow)),
+                    Span::styled("[y/n]", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                ]);
+                confirm_text.render(area, buf);
+            }
+            return;
+        }
+
         // In search mode, show only the search prompt
         if self.is_search_mode() {
             let search_text = Line::from(vec![

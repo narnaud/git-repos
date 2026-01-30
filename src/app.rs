@@ -68,6 +68,7 @@ pub struct App {
     pub filter_mode: FilterMode,
     search_query: String,
     search_mode: bool,
+    delete_confirmation: Option<usize>,
     root_path: Option<std::path::PathBuf>,
     pub cwd_file_enabled: bool,
 }
@@ -220,6 +221,7 @@ impl App {
             filter_mode: FilterMode::All,
             search_query: String::new(),
             search_mode: false,
+            delete_confirmation: None,
             root_path,
             cwd_file_enabled,
         }
@@ -285,7 +287,9 @@ impl App {
     fn handle_event(&mut self, event: TerminalEvent) -> Result<()> {
         match event {
             TerminalEvent::Key(code, modifiers) => {
-                if self.search_mode {
+                if self.is_confirmation_mode() {
+                    self.handle_confirmation_key(code);
+                } else if self.search_mode {
                     self.handle_search_key(code);
                 } else {
                     self.handle_normal_key(code, modifiers);
@@ -380,6 +384,19 @@ impl App {
             }
             KeyCode::Char('u') | KeyCode::Char('U') => {
                 self.handle_update_repo();
+            }
+            _ => {}
+        }
+    }
+
+    /// Handle keys in confirmation mode
+    fn handle_confirmation_key(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Char('y') | KeyCode::Char('Y') => {
+                self.perform_drop_repo();
+            }
+            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+                self.cancel_confirmation();
             }
             _ => {}
         }
@@ -547,6 +564,24 @@ impl App {
         &self.search_query
     }
 
+    /// Check if in delete confirmation mode
+    pub fn is_confirmation_mode(&self) -> bool {
+        self.delete_confirmation.is_some()
+    }
+
+    /// Get the repository name being confirmed for deletion
+    pub fn confirmation_repo_name(&self) -> Option<String> {
+        self.delete_confirmation
+            .and_then(|idx| self.repos.get(idx))
+            .map(|repo| repo.display_short().to_string())
+    }
+
+    /// Cancel the delete confirmation
+    fn cancel_confirmation(&mut self) {
+        self.delete_confirmation = None;
+        self.needs_redraw = true;
+    }
+
     /// Move to next item
     fn next(&mut self) {
         let filtered = self.filtered_repos();
@@ -587,6 +622,21 @@ impl App {
     /// Handle dropping a repository
     fn handle_drop_repo(&mut self) {
         let Some(selected) = self.table_state.selected() else {
+            return;
+        };
+
+        let Some(_repo) = self.repos.get(selected) else {
+            return;
+        };
+
+        // Request confirmation
+        self.delete_confirmation = Some(selected);
+        self.needs_redraw = true;
+    }
+
+    /// Perform the actual deletion after confirmation
+    fn perform_drop_repo(&mut self) {
+        let Some(selected) = self.delete_confirmation.take() else {
             return;
         };
 
