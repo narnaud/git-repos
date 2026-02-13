@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/narnaud/git-repos/compare/v0.6.0...v0.7.0) (2026-02-13)
+
+
+### Features ✨
+
+* skip tmp directories when scanning for git repositories ([1e0ec94](https://github.com/narnaud/git-repos/commit/1e0ec94af985f5d4e83b44383df2dfb332071124))
+
 ## [0.6.0](https://github.com/narnaud/git-repos/compare/v0.5.0...v0.6.0) (2026-01-30)
 
 
