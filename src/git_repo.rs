@@ -334,6 +334,11 @@ pub fn find_git_repos(root: &Path) -> Vec<GitRepo> {
                 return false;
             }
 
+            // Skip tmp directories
+            if filename.to_str().is_some_and(|s| s == "tmp") {
+                return false;
+            }
+
             // Skip if parent is a git repo (don't descend into nested repos)
             if let Some(parent) = e.path().parent()
                 && parent != root && is_git_repo(parent)
