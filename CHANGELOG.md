@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.7.1](https://github.com/narnaud/git-repos/compare/v0.7.0...v0.7.1) (2026-02-28)
+
+
+### Other
+
+* Add release profile for optimized binary size ([73b96ac](https://github.com/narnaud/git-repos/commit/73b96acfc7813a13403b69e716590a8e9ce27732))
+* **ci:** Update build and publish, add dependabot ([ff6b9f4](https://github.com/narnaud/git-repos/commit/ff6b9f4a21d8482de94ea42f7a0b9ae6f8de5885))
+* **deps:** bump clap from 4.5.53 to 4.5.60 ([32b9730](https://github.com/narnaud/git-repos/commit/32b97300654e6b84a5cbda94d1062413f42bd1bc))
+* **deps:** bump crossterm from 0.28.1 to 0.29.0 ([51f7e33](https://github.com/narnaud/git-repos/commit/51f7e33c219b9b32b4404d46c513dc3f205ab4c2))
+* **deps:** bump ratatui from 0.29.0 to 0.30.0 ([8af5f7c](https://github.com/narnaud/git-repos/commit/8af5f7cc08db14f65dd289df39b443990a17ecba))
+* **deps:** bump tokio from 1.48.0 to 1.49.0 ([73d6dfa](https://github.com/narnaud/git-repos/commit/73d6dfaf8c3e63c323c513370cd51275816ba3fd))
+* **deps:** replace deprecated serde_yaml with yaml_serde ([c9bdf9d](https://github.com/narnaud/git-repos/commit/c9bdf9df33bd1ab326f407e95495d57daa34592d))
+* Update  manifest with metadata ([3aed577](https://github.com/narnaud/git-repos/commit/3aed577f796563481dd01c98694ee67947829608))
+
 ## [0.7.0](https://github.com/narnaud/git-repos/compare/v0.6.0...v0.7.0) (2026-02-13)
 
 
