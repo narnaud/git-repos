@@ -1,17 +1,36 @@
 [package]
-name = "git-repos"
+name = "git-repos-manager"
+publish = true
 version = "0.7.0"
 edition = "2024"
+rust-version = "1.90"
+description = "Scan and manage git repositories with ease"
+license = "MIT"
+repository = "https://github.com/narnaud/git-repos"
+homepage = "https://narnaud.github.io/git-repos"
+readme = "README.md"
+keywords = [ "git", "cli", "repository" ]
+categories = [ "command-line-utilities", "development-tools" ]
+exclude = [ ".github/" ]
+
+[[bin]]
+name = "git-repos"
+path = "src/main.rs"
 
 [dependencies]
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.5", features = [ "derive" ] }
 walkdir = "2.5"
 color-eyre = "0.6"
 ratatui = "0.29"
-crossterm = { version = "0.28", features = ["event-stream"] }
-tokio = { version = "1.42", features = ["rt-multi-thread", "sync", "macros", "time"] }
+crossterm = { version = "0.28", features = [ "event-stream" ] }
+tokio = { version = "1.42", features = [
+    "rt-multi-thread",
+    "sync",
+    "macros",
+    "time",
+] }
 futures = "0.3"
 dirs = "5.0"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = [ "derive" ] }
 toml = "0.8"
 serde_yaml = "0.9"
