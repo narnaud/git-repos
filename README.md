@@ -56,19 +56,31 @@ Git-Repos is a command-line tool with a Text User Interface (TUI) that helps you
 
 ## Installation
 
-### Via Scoop (preferred)
+### Installation via [Cargo](https://doc.rust-lang.org/cargo/)
+
+```
+cargo install git-repos-manager
+```
+
+### Installation via [Scoop](https://scoop.sh/)
+
+Install **git-repos** with [scoop](<https://scoop.sh/>):
 
 ```powershell
 scoop bucket add narnaud https://github.com/narnaud/scoop-bucket
 scoop install git-repos
 ```
 
-### Or via archive files
+### Prebuilt binaries
 
-1. Go to the [Releases](https://github.com/narnaud/git-repos/releases) page
-2. Download the latest `git-repos-x86_64-pc-windows-msvc.zip` file
-3. Extract the files from it into a directory
-4. Add the directory to your PATH
+Download the latest archive for your platform from the [Releases](https://github.com/narnaud/git-repos/releases) page, extract it, and add the binary to your PATH.
+
+| Platform      | Archive                                  |
+|---------------|------------------------------------------|
+| Windows (x86_64) | `git-repos-x86_64-pc-windows-msvc.zip` |
+| Linux (x86_64) | `git-repos-x86_64-unknown-linux-gnu.tar.gz` |
+| Linux (aarch64) | `git-repos-aarch64-unknown-linux-gnu.tar.gz` |
+| macOS (Apple Silicon) | `git-repos-aarch64-apple-darwin.tar.gz` |
 
 ### Build from source
 
@@ -144,7 +156,6 @@ Missing repositories can be:
 - Permanently removed from cache using the 'd' key
 
 ### Shell integration (recommended)
-
 
 Shell integration (recommended)
 --------------------------------
