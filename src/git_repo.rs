@@ -118,7 +118,9 @@ impl GitRepo {
             return Err(color_eyre::eyre::eyre!("Repository already exists"));
         }
 
-        let remote_url = self.remote_url.as_ref()
+        let remote_url = self
+            .remote_url
+            .as_ref()
             .ok_or_else(|| color_eyre::eyre::eyre!("No remote URL for repository"))?;
 
         // Create parent directory if it doesn't exist
@@ -341,7 +343,8 @@ pub fn find_git_repos(root: &Path) -> Vec<GitRepo> {
 
             // Skip if parent is a git repo (don't descend into nested repos)
             if let Some(parent) = e.path().parent()
-                && parent != root && is_git_repo(parent)
+                && parent != root
+                && is_git_repo(parent)
             {
                 return false;
             }
@@ -351,7 +354,10 @@ pub fn find_git_repos(root: &Path) -> Vec<GitRepo> {
         .filter_map(|entry| entry.ok())
         .filter(|entry| entry.file_type().is_dir() && is_git_repo(entry.path()))
         .map(|entry| {
-            let path = entry.path().canonicalize().unwrap_or_else(|_| entry.path().to_path_buf());
+            let path = entry
+                .path()
+                .canonicalize()
+                .unwrap_or_else(|_| entry.path().to_path_buf());
             GitRepo::new(path)
         })
         .collect()

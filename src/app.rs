@@ -1,13 +1,13 @@
 use crate::event::{EventHandler, GitDataUpdate, TerminalEvent};
 use crate::git_repo::GitRepo;
-use crate::util::{strip_unc_prefix, strip_unc_pathbuf};
+use crate::util::{strip_unc_pathbuf, strip_unc_prefix};
 use color_eyre::Result;
 use crossterm::{
     event::{KeyCode, KeyModifiers},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{backend::CrosstermBackend, widgets::TableState, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend, widgets::TableState};
 use std::io;
 use std::path::Path;
 
@@ -76,29 +76,30 @@ pub struct App {
 impl App {
     /// Sort repositories: existing first (alphabetically), then missing (alphabetically)
     fn sort_repos(repos: &mut [GitRepo]) {
-        repos.sort_by(|a, b| {
-            match (a.is_missing(), b.is_missing()) {
-                (false, true) => std::cmp::Ordering::Less,
-                (true, false) => std::cmp::Ordering::Greater,
-                _ => {
-                    let a_name = a.display_short().to_lowercase();
-                    let b_name = b.display_short().to_lowercase();
-                    a_name.cmp(&b_name)
-                }
+        repos.sort_by(|a, b| match (a.is_missing(), b.is_missing()) {
+            (false, true) => std::cmp::Ordering::Less,
+            (true, false) => std::cmp::Ordering::Greater,
+            _ => {
+                let a_name = a.display_short().to_lowercase();
+                let b_name = b.display_short().to_lowercase();
+                a_name.cmp(&b_name)
             }
         });
     }
 
     /// Find repository index by path after sorting
     fn find_repo_index(repos: &[GitRepo], path: &std::path::Path) -> Option<usize> {
-        repos.iter()
-            .position(|r| r.path() == path)
+        repos.iter().position(|r| r.path() == path)
     }
 
     /// Spawn task to load git data for a repository
     ///
     /// Now sends FetchProgress and FetchComplete events for proper animation.
-    fn spawn_git_data_load(tx: tokio::sync::mpsc::UnboundedSender<GitDataUpdate>, idx: usize, path: std::path::PathBuf) {
+    fn spawn_git_data_load(
+        tx: tokio::sync::mpsc::UnboundedSender<GitDataUpdate>,
+        idx: usize,
+        path: std::path::PathBuf,
+    ) {
         let tx_clone = tx.clone();
         tokio::spawn(async move {
             // Start fetch animation
@@ -124,7 +125,11 @@ impl App {
     }
 
     /// Spawn task to fetch and update a repository (manual update with fast-forward)
-    fn spawn_manual_update(tx: tokio::sync::mpsc::UnboundedSender<GitDataUpdate>, idx: usize, path: std::path::PathBuf) {
+    fn spawn_manual_update(
+        tx: tokio::sync::mpsc::UnboundedSender<GitDataUpdate>,
+        idx: usize,
+        path: std::path::PathBuf,
+    ) {
         let tx_clone = tx.clone();
         tokio::spawn(async move {
             // Start fetch animation
@@ -142,7 +147,7 @@ impl App {
             if remote_status != "local-only" && remote_status != "error" {
                 let fetch_result = tokio::task::spawn_blocking({
                     let path = path.clone();
-                    move || GitRepo::fetch(&path, true)  // Always fast-forward for manual update
+                    move || GitRepo::fetch(&path, true) // Always fast-forward for manual update
                 })
                 .await;
 
@@ -253,7 +258,10 @@ impl App {
     }
 
     /// Main event loop
-    async fn run_loop(&mut self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
+    async fn run_loop(
+        &mut self,
+        terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    ) -> Result<()> {
         // Create a timer for animation updates
         let mut animation_interval = tokio::time::interval(tokio::time::Duration::from_millis(100));
 
@@ -349,8 +357,9 @@ impl App {
                 self.should_quit = true;
             }
             KeyCode::Enter => {
-                if self.cwd_file_enabled &&
-                   let Some(repo) = self.table_state.selected().and_then(|i| self.repos.get(i)) {
+                if self.cwd_file_enabled
+                    && let Some(repo) = self.table_state.selected().and_then(|i| self.repos.get(i))
+                {
                     self.selected_repo = Some(repo.path().display().to_string());
                     self.should_quit = true;
                 }
@@ -430,77 +439,77 @@ impl App {
     /// Handle git data updates
     fn handle_git_update(&mut self, update: GitDataUpdate) {
         match update {
-                GitDataUpdate::RemoteStatus(idx, status) => {
-                    if let Some(repo) = self.repos.get_mut(idx) {
-                        repo.set_remote_status(status);
-                        self.needs_redraw = true;
-                    }
-                }
-                GitDataUpdate::Status(idx, status) => {
-                    if let Some(repo) = self.repos.get_mut(idx) {
-                        repo.set_status(status);
-                        self.needs_redraw = true;
-                    }
-                }
-                GitDataUpdate::FetchProgress(idx) => {
-                    if !self.fetching_repos.contains(&idx) {
-                        self.fetching_repos.push(idx);
-                        self.needs_redraw = true;
-                    }
-                }
-                GitDataUpdate::FetchComplete(idx) => {
-                    self.fetching_repos.retain(|&i| i != idx);
-                    self.fetch_animation_frame = (self.fetch_animation_frame + 1) % 10;
+            GitDataUpdate::RemoteStatus(idx, status) => {
+                if let Some(repo) = self.repos.get_mut(idx) {
+                    repo.set_remote_status(status);
                     self.needs_redraw = true;
                 }
-                GitDataUpdate::CloneProgress(idx) => {
-                    if !self.cloning_repos.contains(&idx) {
-                        self.cloning_repos.push(idx);
-                        self.needs_redraw = true;
-                    }
-                }
-                GitDataUpdate::CloneComplete(idx) => {
-                    self.cloning_repos.retain(|&i| i != idx);
-
-                    // Refresh the repository by recreating it as a normal repo
-                    if let Some(repo) = self.repos.get(idx) {
-                        let path = repo.path().to_path_buf();
-
-                        // Only refresh if the clone was successful (directory exists)
-                        if path.exists() {
-                            self.repos[idx] = GitRepo::new(path.clone());
-                            Self::sort_repos(&mut self.repos);
-
-                            if let Some(new_idx) = Self::find_repo_index(&self.repos, &path) {
-                                self.table_state.select(Some(new_idx));
-                                Self::spawn_git_data_load(self.event_handler.git_tx(), new_idx, path);
-                            }
-                        }
-                    }
-
+            }
+            GitDataUpdate::Status(idx, status) => {
+                if let Some(repo) = self.repos.get_mut(idx) {
+                    repo.set_status(status);
                     self.needs_redraw = true;
                 }
-                GitDataUpdate::DeleteProgress(idx) => {
-                    if !self.deleting_repos.contains(&idx) {
-                        self.deleting_repos.push(idx);
-                        self.needs_redraw = true;
-                    }
+            }
+            GitDataUpdate::FetchProgress(idx) => {
+                if !self.fetching_repos.contains(&idx) {
+                    self.fetching_repos.push(idx);
+                    self.needs_redraw = true;
                 }
-                GitDataUpdate::DeleteComplete(idx) => {
-                    self.deleting_repos.retain(|&i| i != idx);
+            }
+            GitDataUpdate::FetchComplete(idx) => {
+                self.fetching_repos.retain(|&i| i != idx);
+                self.fetch_animation_frame = (self.fetch_animation_frame + 1) % 10;
+                self.needs_redraw = true;
+            }
+            GitDataUpdate::CloneProgress(idx) => {
+                if !self.cloning_repos.contains(&idx) {
+                    self.cloning_repos.push(idx);
+                    self.needs_redraw = true;
+                }
+            }
+            GitDataUpdate::CloneComplete(idx) => {
+                self.cloning_repos.retain(|&i| i != idx);
 
-                    if let Some(repo) = self.repos.get_mut(idx) {
-                        let repo_path = repo.path().to_path_buf();
-                        repo.set_missing();
+                // Refresh the repository by recreating it as a normal repo
+                if let Some(repo) = self.repos.get(idx) {
+                    let path = repo.path().to_path_buf();
+
+                    // Only refresh if the clone was successful (directory exists)
+                    if path.exists() {
+                        self.repos[idx] = GitRepo::new(path.clone());
                         Self::sort_repos(&mut self.repos);
 
-                        if let Some(new_idx) = Self::find_repo_index(&self.repos, &repo_path) {
+                        if let Some(new_idx) = Self::find_repo_index(&self.repos, &path) {
                             self.table_state.select(Some(new_idx));
+                            Self::spawn_git_data_load(self.event_handler.git_tx(), new_idx, path);
                         }
                     }
+                }
 
+                self.needs_redraw = true;
+            }
+            GitDataUpdate::DeleteProgress(idx) => {
+                if !self.deleting_repos.contains(&idx) {
+                    self.deleting_repos.push(idx);
                     self.needs_redraw = true;
                 }
+            }
+            GitDataUpdate::DeleteComplete(idx) => {
+                self.deleting_repos.retain(|&i| i != idx);
+
+                if let Some(repo) = self.repos.get_mut(idx) {
+                    let repo_path = repo.path().to_path_buf();
+                    repo.set_missing();
+                    Self::sort_repos(&mut self.repos);
+
+                    if let Some(new_idx) = Self::find_repo_index(&self.repos, &repo_path) {
+                        self.table_state.select(Some(new_idx));
+                    }
+                }
+
+                self.needs_redraw = true;
+            }
         }
     }
 
@@ -521,10 +530,12 @@ impl App {
         }
 
         let query_lower = self.search_query.to_lowercase();
-        let name_match = repo.name()
+        let name_match = repo
+            .name()
             .map(|n| n.to_lowercase().contains(&query_lower))
             .unwrap_or(false);
-        let parent_match = repo.parent_name()
+        let parent_match = repo
+            .parent_name()
             .map(|p| p.to_lowercase().contains(&query_lower))
             .unwrap_or(false);
 
@@ -548,9 +559,7 @@ impl App {
                 let status = repo.status();
                 status != "clean" && status != "loading..."
             }
-            FilterMode::Behind => {
-                repo.remote_status().contains('↓')
-            }
+            FilterMode::Behind => repo.remote_status().contains('↓'),
         }
     }
 
@@ -686,9 +695,8 @@ impl App {
                 let _ = tx.send(GitDataUpdate::DeleteProgress(idx));
 
                 // Perform deletion
-                let delete_result = tokio::task::spawn_blocking(move || {
-                    std::fs::remove_dir_all(&repo_path)
-                }).await;
+                let delete_result =
+                    tokio::task::spawn_blocking(move || std::fs::remove_dir_all(&repo_path)).await;
 
                 // Send delete complete
                 let _ = tx.send(GitDataUpdate::DeleteComplete(idx));
@@ -727,9 +735,8 @@ impl App {
             let _ = tx.send(GitDataUpdate::CloneProgress(idx));
 
             // Perform clone
-            let clone_result = tokio::task::spawn_blocking(move || {
-                repo_clone.clone_repository()
-            }).await;
+            let clone_result =
+                tokio::task::spawn_blocking(move || repo_clone.clone_repository()).await;
 
             // Send clone complete
             let _ = tx.send(GitDataUpdate::CloneComplete(idx));

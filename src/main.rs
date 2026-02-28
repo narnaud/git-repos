@@ -78,10 +78,9 @@ fn handle_set_root(path: PathBuf) -> Result<()> {
 }
 
 fn handle_set_update(enabled: String) -> Result<()> {
-    let enabled_bool = enabled
-        .to_lowercase()
-        .parse::<bool>()
-        .map_err(|_| color_eyre::eyre::eyre!("Invalid value '{}'. Use 'true' or 'false'", enabled))?;
+    let enabled_bool = enabled.to_lowercase().parse::<bool>().map_err(|_| {
+        color_eyre::eyre::eyre!("Invalid value '{}'. Use 'true' or 'false'", enabled)
+    })?;
 
     let mut settings = Settings::load()?;
     settings.set_update(enabled_bool)?;
@@ -136,12 +135,9 @@ async fn main() -> Result<()> {
     app.run().await?;
 
     // Save cache if we were scanning root directory
-    if is_root
-        && let Some(root_path) = &settings.root_path
-    {
+    if is_root && let Some(root_path) = &settings.root_path {
         save_repos_to_cache(app.repos(), root_path)?;
     }
-
 
     // If a repository was selected and --cwd-file is set, write to the file
     if let (Some(repo_path), Some(cwd_file)) = (app.selected_repo, args.cwd_file) {

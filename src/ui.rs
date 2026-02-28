@@ -24,8 +24,11 @@ impl Widget for &mut App {
 impl App {
     /// Render the repository table
     fn render_table(&mut self, area: Rect, buf: &mut Buffer) {
-        let header = Row::new(vec!["Repository", "Branch", "Remote Status", "Status"])
-            .style(Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD));
+        let header = Row::new(vec!["Repository", "Branch", "Remote Status", "Status"]).style(
+            Style::default()
+                .fg(Color::LightBlue)
+                .add_modifier(Modifier::BOLD),
+        );
 
         let filtered_indices = self.filtered_repos();
         let selected_idx = self.table_state.selected();
@@ -39,7 +42,11 @@ impl App {
                 // If repo is missing, render everything in gray (or white if selected)
                 if repo.is_missing() {
                     let is_selected = selected_idx == Some(idx);
-                    let color = if is_selected { Color::White } else { Color::DarkGray };
+                    let color = if is_selected {
+                        Color::White
+                    } else {
+                        Color::DarkGray
+                    };
 
                     return Row::new(vec![
                         Cell::from(repo.display_short()).fg(color),
@@ -97,29 +104,50 @@ impl App {
                     .title_bottom(
                         Line::from(vec![
                             if self.filter_mode == crate::app::FilterMode::All {
-                                Span::styled("All", Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD))
+                                Span::styled(
+                                    "All",
+                                    Style::default()
+                                        .fg(Color::LightBlue)
+                                        .add_modifier(Modifier::BOLD),
+                                )
                             } else {
                                 Span::styled("All", Style::default().fg(Color::White))
                             },
                             Span::raw(" - "),
                             if self.filter_mode == crate::app::FilterMode::NoUpstream {
-                                Span::styled("No Upstream", Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD))
+                                Span::styled(
+                                    "No Upstream",
+                                    Style::default()
+                                        .fg(Color::LightBlue)
+                                        .add_modifier(Modifier::BOLD),
+                                )
                             } else {
                                 Span::styled("No Upstream", Style::default().fg(Color::White))
                             },
                             Span::raw(" - "),
                             if self.filter_mode == crate::app::FilterMode::Behind {
-                                Span::styled("Behind", Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD))
+                                Span::styled(
+                                    "Behind",
+                                    Style::default()
+                                        .fg(Color::LightBlue)
+                                        .add_modifier(Modifier::BOLD),
+                                )
                             } else {
                                 Span::styled("Behind", Style::default().fg(Color::White))
                             },
                             Span::raw(" - "),
                             if self.filter_mode == crate::app::FilterMode::Modified {
-                                Span::styled("Modified", Style::default().fg(Color::LightBlue).add_modifier(Modifier::BOLD))
+                                Span::styled(
+                                    "Modified",
+                                    Style::default()
+                                        .fg(Color::LightBlue)
+                                        .add_modifier(Modifier::BOLD),
+                                )
                             } else {
                                 Span::styled("Modified", Style::default().fg(Color::White))
                             },
-                        ]).right_aligned()
+                        ])
+                        .right_aligned(),
                     )
                     .borders(Borders::ALL)
                     .border_type(ratatui::widgets::BorderType::Rounded)
@@ -143,9 +171,17 @@ impl App {
             if let Some(repo_name) = self.confirmation_repo_name() {
                 let confirm_text = Line::from(vec![
                     Span::styled("Delete repository ", Style::default().fg(Color::Yellow)),
-                    Span::styled(repo_name, Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        repo_name,
+                        Style::default()
+                            .fg(Color::White)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::styled("? ", Style::default().fg(Color::Yellow)),
-                    Span::styled("[y/n]", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        "[y/n]",
+                        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                    ),
                 ]);
                 confirm_text.render(area, buf);
             }
@@ -179,7 +215,10 @@ impl App {
             // Show search at the bottom left when a search filter is active
             let search_display = format!("Search: {} (press / to edit)", self.search_query());
 
-            if !self.fetching_repos.is_empty() || !self.cloning_repos.is_empty() || !self.deleting_repos.is_empty() {
+            if !self.fetching_repos.is_empty()
+                || !self.cloning_repos.is_empty()
+                || !self.deleting_repos.is_empty()
+            {
                 let spinner_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
                 let spinner = spinner_chars[self.fetch_animation_frame % spinner_chars.len()];
 
@@ -220,17 +259,26 @@ impl App {
                     Span::styled(repo_count, Style::default().fg(Color::Cyan)),
                     Span::raw(" | "),
                     Span::styled(progress_text, Style::default().fg(Color::Yellow)),
-                    Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Clone: c | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        " | Navigate: ↑/↓ or j/k | Mode: [/] | Clone: c | Drop: d | Quit: q or Ctrl-C",
+                        Style::default().fg(Color::DarkGray),
+                    ),
                 ])
             } else {
                 Line::from(vec![
                     Span::styled(search_display, Style::default().fg(Color::Yellow)),
                     Span::raw(" | "),
                     Span::styled(repo_count, Style::default().fg(Color::Cyan)),
-                    Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Clone: c | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        " | Navigate: ↑/↓ or j/k | Mode: [/] | Clone: c | Drop: d | Quit: q or Ctrl-C",
+                        Style::default().fg(Color::DarkGray),
+                    ),
                 ])
             }
-        } else if !self.fetching_repos.is_empty() || !self.cloning_repos.is_empty() || !self.deleting_repos.is_empty() {
+        } else if !self.fetching_repos.is_empty()
+            || !self.cloning_repos.is_empty()
+            || !self.deleting_repos.is_empty()
+        {
             // Show fetch/clone/delete progress with animation
             let spinner_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
             let spinner = spinner_chars[self.fetch_animation_frame % spinner_chars.len()];
@@ -270,16 +318,21 @@ impl App {
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
                 Span::raw(" | "),
                 Span::styled(progress_text, Style::default().fg(Color::Yellow)),
-                Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Update: u | Clone: c | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    " | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Update: u | Clone: c | Drop: d | Quit: q or Ctrl-C",
+                    Style::default().fg(Color::DarkGray),
+                ),
             ])
         } else {
             Line::from(vec![
                 Span::styled(repo_count, Style::default().fg(Color::Cyan)),
-                Span::styled(" | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Update: u | Clone: c | Drop: d | Quit: q or Ctrl-C", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    " | Navigate: ↑/↓ or j/k | Mode: [/] | Search: / | Update: u | Clone: c | Drop: d | Quit: q or Ctrl-C",
+                    Style::default().fg(Color::DarkGray),
+                ),
             ])
         };
 
         status_text.render(area, buf);
     }
 }
-

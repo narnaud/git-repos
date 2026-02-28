@@ -1,8 +1,8 @@
+use crate::util::strip_unc_pathbuf;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use crate::util::strip_unc_pathbuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Settings {

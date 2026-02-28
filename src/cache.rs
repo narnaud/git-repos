@@ -1,15 +1,18 @@
-use crate::config::{load_repo_cache, save_repo_cache, CachedRepo};
+use crate::config::{CachedRepo, load_repo_cache, save_repo_cache};
 use crate::git_repo::GitRepo;
+use crate::util::strip_unc_pathbuf;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use crate::util::strip_unc_pathbuf;
 
 // Use strip_unc_pathbuf from util.rs
 
 /// Get relative path from root, handling \?\ prefix
 fn get_relative_path(repo_path: &Path, root_path: &Path) -> Option<PathBuf> {
     let cleaned_path = strip_unc_pathbuf(repo_path);
-    cleaned_path.strip_prefix(root_path).ok().map(|p| p.to_path_buf())
+    cleaned_path
+        .strip_prefix(root_path)
+        .ok()
+        .map(|p| p.to_path_buf())
 }
 
 /// Build a set of existing repo relative paths
@@ -21,7 +24,12 @@ fn build_existing_paths(repos: &[GitRepo], root_path: &Path) -> HashSet<PathBuf>
 }
 
 /// Add missing repos from cache to the repo list
-fn add_missing_repos(repos: &mut Vec<GitRepo>, cached_repos: &[CachedRepo], existing_paths: &HashSet<PathBuf>, root_path: &Path) {
+fn add_missing_repos(
+    repos: &mut Vec<GitRepo>,
+    cached_repos: &[CachedRepo],
+    existing_paths: &HashSet<PathBuf>,
+    root_path: &Path,
+) {
     for cached in cached_repos {
         if !existing_paths.contains(&cached.path) {
             let full_path = root_path.join(&cached.path);
@@ -45,9 +53,10 @@ fn build_cache_from_repos(repos: &[GitRepo], root_path: &Path) -> Vec<CachedRepo
 
             // Skip repos whose folder name starts with `_`
             if let Some(folder_name) = relative_path.file_name()
-                && folder_name.to_string_lossy().starts_with('_') {
-                    return None;
-                }
+                && folder_name.to_string_lossy().starts_with('_')
+            {
+                return None;
+            }
 
             Some(CachedRepo {
                 path: relative_path,
