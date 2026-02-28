@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.7.2](https://github.com/narnaud/git-repos/compare/v0.7.1...v0.7.2) (2026-02-28)
+
+
+### Bug Fixes 🐞
+
+* **ci:** remove unnecessary OpenSSL deps from build workflow ([febe92d](https://github.com/narnaud/git-repos/commit/febe92d1ecb172d3b621a4c6af6c768d7a48197b))
+
+
+### Documentation
+
+* Update installation section ([5e4dfd0](https://github.com/narnaud/git-repos/commit/5e4dfd0e5843024364e6dcbd6a769738c729e82e))
+
+
+### Other
+
+* Remove homepage, there's none ([79dbf99](https://github.com/narnaud/git-repos/commit/79dbf99d711d47969731a02db7c711cf862637cc))
+
 ## [0.7.1](https://github.com/narnaud/git-repos/compare/v0.7.0...v0.7.1) (2026-02-28)
 
 

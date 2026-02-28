@@ -1,7 +1,7 @@
 [package]
 name = "git-repos-manager"
 publish = true
-version = "0.7.1"
+version = "0.7.2"
 edition = "2024"
 rust-version = "1.90"
 description = "Scan and manage git repositories with ease"
