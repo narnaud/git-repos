@@ -87,7 +87,7 @@ pub fn save_repo_cache(_root: &Path, repos: &[CachedRepo]) -> Result<()> {
         fs::create_dir_all(parent)?;
     }
 
-    let yaml = serde_yaml::to_string(repos)?;
+    let yaml = yaml_serde::to_string(repos)?;
     fs::write(&cache_path, yaml)?;
 
     Ok(())
@@ -105,7 +105,7 @@ pub fn load_repo_cache() -> Result<Vec<CachedRepo>> {
     }
 
     let contents = fs::read_to_string(&cache_path)?;
-    let repos: Vec<CachedRepo> = serde_yaml::from_str(&contents)?;
+    let repos: Vec<CachedRepo> = yaml_serde::from_str(&contents)?;
 
     Ok(repos)
 }
@@ -127,7 +127,7 @@ pub fn remove_from_cache(relative_path: &Path) -> Result<()> {
         fs::create_dir_all(parent)?;
     }
 
-    let yaml = serde_yaml::to_string(&cached_repos)?;
+    let yaml = yaml_serde::to_string(&cached_repos)?;
     fs::write(&cache_path, yaml)?;
 
     Ok(())
