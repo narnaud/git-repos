@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.3](https://github.com/narnaud/git-repos/compare/v0.7.2...v0.7.3) (2026-03-01)
+
+
+### Other
+
+* Add CODEOWNERS ([a92a268](https://github.com/narnaud/git-repos/commit/a92a268f6cda7905066094e47a3f8e84995f3590))
+* Add pre-commit configuration ([4f9557e](https://github.com/narnaud/git-repos/commit/4f9557e37538c39da5c39025b06529370613f769))
+* **deps:** bump actions/checkout from 4 to 6 ([1b7124d](https://github.com/narnaud/git-repos/commit/1b7124d5465f92d31c0a1d8a854623a1658a88cb))
+* **deps:** bump dirs from 5.0.1 to 6.0.0 ([507610e](https://github.com/narnaud/git-repos/commit/507610ea4a21e4e05100d74f90b35eaa7305b119))
+* **deps:** bump futures from 0.3.31 to 0.3.32 ([f592cbb](https://github.com/narnaud/git-repos/commit/f592cbb1e82fc11e7b2eacf8817743c80073a6b6))
+* **deps:** bump toml from 0.8.23 to 1.0.3+spec-1.1.0 ([78a37c5](https://github.com/narnaud/git-repos/commit/78a37c58eae9d14549e89207741661007ced37f1))
+* Fix pre-commit issues ([54a4e01](https://github.com/narnaud/git-repos/commit/54a4e01c56c3e161e493632c9b48dcff40635e27))
+
 ## [0.7.2](https://github.com/narnaud/git-repos/compare/v0.7.1...v0.7.2) (2026-02-28)
 
 
