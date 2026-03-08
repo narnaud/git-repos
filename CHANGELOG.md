@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.4](https://github.com/narnaud/git-repos/compare/v0.7.3...v0.7.4) (2026-03-08)
+
+
+### Other
+
+* **deps:** bump tokio from 1.49.0 to 1.50.0 ([cf183b0](https://github.com/narnaud/git-repos/commit/cf183b09620b69da654da938fb8a85f3efaa635c))
+* **deps:** bump toml from 1.0.3+spec-1.1.0 to 1.0.6+spec-1.1.0 ([77ba074](https://github.com/narnaud/git-repos/commit/77ba0745443f3a66461db63143c8ac7b4df5e412))
+
 ## [0.7.3](https://github.com/narnaud/git-repos/compare/v0.7.2...v0.7.3) (2026-03-01)
 
 
