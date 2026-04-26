@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.5](https://github.com/narnaud/git-repos/compare/v0.7.4...v0.7.5) (2026-04-26)
+
+
+### Other
+
+* **deps:** bump clap from 4.6.0 to 4.6.1 ([0538382](https://github.com/narnaud/git-repos/commit/05383824477566cf8fb548affa2dd88fc1d63dfd))
+* **deps:** bump googleapis/release-please-action from 4 to 5 ([ccb5ce2](https://github.com/narnaud/git-repos/commit/ccb5ce2aa01982a9c3b919dad1fd9db7a2f7cde8))
+* **deps:** bump softprops/action-gh-release from 2 to 3 ([d8f59d6](https://github.com/narnaud/git-repos/commit/d8f59d6a04b00c8dd6ac1a22e47acfb02f0849e7))
+* **deps:** bump tokio from 1.50.0 to 1.51.0 ([85f7ede](https://github.com/narnaud/git-repos/commit/85f7ede8bcd743517636710a31db941259bb80fd))
+* **deps:** bump tokio from 1.51.0 to 1.51.1 ([dc4d40f](https://github.com/narnaud/git-repos/commit/dc4d40fbbf7673dd7b04b84cfd0b77de6aa19396))
+* **deps:** bump tokio from 1.51.1 to 1.52.1 ([e51c6f8](https://github.com/narnaud/git-repos/commit/e51c6f8891b56b0f030035ec62c0002d9399bfca))
+* **deps:** bump toml from 1.1.0+spec-1.1.0 to 1.1.2+spec-1.1.0 ([2d6cee1](https://github.com/narnaud/git-repos/commit/2d6cee12ee79c4758f22219c62f482b702d683c8))
+
 ## [0.7.4](https://github.com/narnaud/git-repos/compare/v0.7.3...v0.7.4) (2026-03-29)
 
 
