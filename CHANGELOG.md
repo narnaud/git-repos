@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.7.6](https://github.com/narnaud/git-repos/compare/v0.7.5...v0.7.6) (2026-08-16)
+
+
+### Other
+
+* **deps:** bump actions/setup-python from 6 to 7 ([76948a4](https://github.com/narnaud/git-repos/commit/76948a49c060f0b8e2caecfe380b5a38e2e4e546))
+* **deps:** bump clap from 4.6.1 to 4.6.4 ([c621187](https://github.com/narnaud/git-repos/commit/c621187cde2520a4608a2fa07ca7a70a07cfa98a))
+* **deps:** bump clap from 4.6.4 to 4.6.5 ([0c8833e](https://github.com/narnaud/git-repos/commit/0c8833eee9ed10493cac69faa5037fdcd31e60ed))
+* **deps:** bump clap from 4.6.5 to 4.6.6 ([4e78dbe](https://github.com/narnaud/git-repos/commit/4e78dbe0d7d3f2eb0629a4080d07e4da25303bac))
+* **deps:** bump futures from 0.3.32 to 0.3.33 ([9b524aa](https://github.com/narnaud/git-repos/commit/9b524aaae856da186d3a7f60fcc38c1352ce871c))
+* **deps:** bump futures from 0.3.33 to 0.3.34 ([4e2b97b](https://github.com/narnaud/git-repos/commit/4e2b97b9ac1612e42d64c81134fcefb8109698aa))
+* **deps:** bump serde from 1.0.228 to 1.0.229 ([51a92e3](https://github.com/narnaud/git-repos/commit/51a92e37e7c607b646be7d6ba4083402c613040f))
+* **deps:** bump tokio from 1.52.3 to 1.53.1 ([6a6a2ca](https://github.com/narnaud/git-repos/commit/6a6a2ca7807c1c944ab40479e6f457cabb92ef86))
+* **deps:** bump toml from 1.1.2+spec-1.1.0 to 1.1.3+spec-1.1.0 ([7e1f8b3](https://github.com/narnaud/git-repos/commit/7e1f8b363c47ed7bb9dd318a25cf203ce7d4a4cc))
+* **deps:** bump toml from 1.1.3+spec-1.1.0 to 1.1.4+spec-1.1.0 ([8dfdd31](https://github.com/narnaud/git-repos/commit/8dfdd31741d6acd57c94d2bc4ac32c0be6c48ba1))
+* **deps:** bump yaml_serde from 0.10.4 to 0.10.5 ([0373d1c](https://github.com/narnaud/git-repos/commit/0373d1ca5e6bda2cd60c6b2ecfc319f846465f2a))
+
 ## [0.7.5](https://github.com/narnaud/git-repos/compare/v0.7.4...v0.7.5) (2026-06-21)
 
 
